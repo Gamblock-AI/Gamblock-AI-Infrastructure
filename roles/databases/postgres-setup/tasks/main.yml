@@ -1,0 +1,38 @@
+---
+# Deploy PostgreSQL as a Docker container on the postgres network.
+- name: "Create postgres data dir"
+  ansible.builtin.file:
+    path: "{{ docker_stack_base }}/postgres/data"
+    state: directory
+    mode: "0755"
+    owner: "999"  # postgres uid inside the container
+    group: "999"
+
+- name: "Render postgres env file"
+  ansible.builtin.template:
+    src: postgres.env.j2
+    dest: "{{ docker_stack_base }}/postgres/.env"
+    mode: "0640"
+  no_log: true
+
+- name: "Render postgres docker-compose"
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ docker_stack_base }}/postgres/docker-compose.yml"
+    mode: "0644"
+
+- name: "Start PostgreSQL"
+  ansible.builtin.shell: |
+    cd {{ docker_stack_base }}/postgres && docker compose up -d
+  args:
+    executable: /bin/bash
+  changed_when: true
+
+- name: "Wait for PostgreSQL to accept connections"
+  ansible.builtin.shell: |
+    docker exec {{ postgres_container_name }} pg_isready -U {{ gamblock_db_username }}
+  register: pg_ready
+  retries: 15
+  delay: 2
+  until: pg_ready.rc == 0
+  changed_when: false

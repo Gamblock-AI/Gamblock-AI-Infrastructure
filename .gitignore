@@ -1,0 +1,19 @@
+# ===== Ansible =====
+.ansible/
+*.retry
+
+# ===== Secrets (NEVER commit) =====
+# Vault password file
+.vault_pass
+# Encrypted vault (committed encrypted; uncomment to ignore plaintext only)
+# group_vars/all/vault.yml
+# Local environment / tokens
+.env
+
+# ===== Python =====
+__pycache__/
+*.pyc
+venv/
+
+# ===== OS =====
+.DS_Store

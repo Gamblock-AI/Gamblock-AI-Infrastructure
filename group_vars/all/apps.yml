@@ -1,0 +1,31 @@
+---
+# Central application catalog for Gamblock-AI.
+
+gamblock_ai_backend:
+  name: "gamblock-ai-backend"
+  enabled: true
+  image: "ghcr.io/gamblock-ai/gamblock-ai-backend:latest"
+  port: "{{ gamblock_ai_backend_port }}"
+  requires_database: true
+  networks:
+    - "{{ nginx_proxy_manager_network }}"
+    - "{{ postgres_network }}"
+  proxy:
+    subdomain: "api"
+    forward_host: "gamblock-ai-backend"
+    forward_port: 8080
+  env_template: "roles/applications/gamblock-ai-backend-setup/templates/.env.j2"
+
+gamblock_ai_website:
+  name: "gamblock-ai-website"
+  enabled: true
+  image: "ghcr.io/gamblock-ai/gamblock-ai-website:latest"
+  port: "{{ gamblock_ai_website_port }}"
+  requires_database: false
+  networks:
+    - "{{ nginx_proxy_manager_network }}"
+  proxy:
+    subdomain: "app"
+    forward_host: "gamblock-ai-website"
+    forward_port: 3000
+  env_template: "roles/applications/gamblock-ai-website-setup/templates/.env.j2"

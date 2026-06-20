@@ -1,0 +1,44 @@
+---
+# Sensitive variables template. Copy to vault.yml and fill real values, then
+# encrypt: make vault-encrypt
+#
+#   cp group_vars/all/vault.yml.example group_vars/all/vault.yml
+#   # edit vault.yml ...
+#   make vault-encrypt
+
+# ---- GHCR / Docker registry ----
+# A GitHub PAT with read:packages scope, used by update.sh to pull images.
+vault_docker_password: "REPLACE_WITH_GITHUB_PAT_read_packages"
+
+# ---- Deploy user (app-deployer) ----
+vault_app_deployer_ssh_key: "ssh-ed25519 AAAA... app-deployer@ci"
+
+# ---- PostgreSQL ----
+vault_postgres_password: "change-this-strong-postgres-password"
+vault_gamblock_db_password: "change-this-gamblock-db-password"
+
+# ---- Gamblock-AI Backend secrets ----
+vault_gamblock_backend:
+  jwt_access_secret: "generate-with-openssl-rand-hex-32"
+  journal_encryption_key: "generate-with-openssl-rand-hex-32"
+  whatsapp_api_key: ""
+  whatsapp_phone_id: ""
+  whatsapp_base_url: "https://graph.facebook.com/v18.0"
+
+# ---- Nginx Proxy Manager (if setting up fresh) ----
+vault_npm_default_email: "admin@example.com"
+vault_npm_default_password: "change-this-npm-password"
+
+# ---- GitHub (PAT for setting repo secrets/variables; needs repo scope) ----
+vault_github_token: "REPLACE_WITH_GITHUB_PAT_repo_admin"
+
+# ---- VPS SSH private key for CI deploy (app-deployer) ----
+# The private key matching vault_app_deployer_ssh_key's public key. Used as the
+# VPS_KEY GitHub secret so CI can SSH to the VPS.
+vault_app_deployer_private_key: |
+  -----BEGIN OPENSSH PRIVATE KEY-----
+  REPLACE_WITH_APP_DEPLOYER_PRIVATE_KEY
+  -----END OPENSSH PRIVATE KEY-----
+
+# ---- Cloudflare API ----
+vault_cloudflare_api_token: "REPLACE_WITH_CLOUDFLARE_API_TOKEN_DNS_EDIT"

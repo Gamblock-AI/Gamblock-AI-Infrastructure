@@ -1,0 +1,54 @@
+---
+# Non-sensitive variables (plain text). Secrets live in vault.yml.
+
+# ---- GitHub Container Registry ----
+github_registry: "ghcr.io"
+github_username: "gamblock-ai"
+
+# ---- Domains ----
+primary_domain: "gamblock-ai.my.id"
+
+# ---- Application ports (internal container ports) ----
+gamblock_ai_backend_port: 8080
+gamblock_ai_website_port: 3000
+
+# ---- Docker stack paths ----
+docker_stack_base: "/opt/docker-stack"
+docker_stack_applications: "{{ docker_stack_base }}/applications"
+docker_password_file: "{{ docker_stack_base }}/docker-password.txt"
+
+# ---- Docker networks ----
+nginx_proxy_manager_network: "nginx_proxy_manager_network"
+postgres_network: "postgres_network"
+
+# ---- PostgreSQL ----
+postgres_image: "postgres:16-alpine"
+postgres_container_name: "postgres-db"
+postgres_port: 5432
+gamblock_db_name: "gamblock"
+gamblock_db_username: "gamblock"
+
+# ---- Role toggles ----
+enable_system: true
+enable_docker: true
+enable_postgres: true
+enable_gamblock_ai_backend: true
+enable_gamblock_ai_website: true
+
+# ---- GitHub (org repos for CI secrets/variables) ----
+github_owner: "Gamblock-AI"
+github_repos:
+  - "Gamblock-AI-Backend"
+  - "Gamblock-AI-Website"
+# CI deploy user on the VPS (used as VPS_USER secret)
+ci_deploy_user: "app-deployer"
+
+# ---- Cloudflare DNS ----
+cloudflare_zone_name: "gamblock-ai.my.id"
+cloudflare_records:
+  - name: "api"
+    type: "A"
+    proxied: true
+  - name: "app"
+    type: "A"
+    proxied: true

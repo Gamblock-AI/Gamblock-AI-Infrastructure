@@ -1,0 +1,11 @@
+---
+exclude_paths:
+  - .ansible/
+  - venv/
+  - group_vars/all/vault.yml
+warn_list:
+  - experimental
+  - jinja[spacing]
+skip_list:
+  - name[casing]
+  - var-naming[no-role-prefix]

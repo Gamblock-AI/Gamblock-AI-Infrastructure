@@ -1,0 +1,19 @@
+services:
+  {{ postgres_container_name }}:
+    image: {{ postgres_image }}
+    container_name: {{ postgres_container_name }}
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    networks:
+      - {{ postgres_network }}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{ gamblock_db_username }}"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+networks:
+  {{ postgres_network }}:
+    external: true

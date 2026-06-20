@@ -1,0 +1,22 @@
+services:
+  {{ gamblock_ai_website.name }}:
+    image: {{ gamblock_ai_website.image }}
+    container_name: {{ gamblock_ai_website.name }}
+    restart: unless-stopped
+    env_file: .env
+    networks:
+{% for net in gamblock_ai_website.networks %}
+      - {{ net }}
+{% endfor %}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "--tries=1", "--spider", "http://localhost:{{ gamblock_ai_website.port }}/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+networks:
+{% for net in gamblock_ai_website.networks %}
+  {{ net }}:
+    external: true
+{% endfor %}

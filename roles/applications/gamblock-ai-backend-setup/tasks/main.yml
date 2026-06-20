@@ -1,0 +1,7 @@
+---
+- name: "Deploy Gamblock-AI backend"
+  ansible.builtin.include_tasks: ../../common/tasks/deploy-golang-app.yml
+  vars:
+    app_name: "{{ gamblock_ai_backend.name }}"
+    app_image: "{{ gamblock_ai_backend.image }}"
+    app_port: "{{ gamblock_ai_backend.port }}"

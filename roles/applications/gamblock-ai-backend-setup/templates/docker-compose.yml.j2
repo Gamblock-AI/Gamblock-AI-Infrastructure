@@ -1,0 +1,28 @@
+services:
+  {{ gamblock_ai_backend.name }}:
+    image: {{ gamblock_ai_backend.image }}
+    container_name: {{ gamblock_ai_backend.name }}
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - {{ gamblock_ai_backend.name }}_artifacts:/app/var/artifacts
+    networks:
+      {{ '# noqa' }}
+{% for net in gamblock_ai_backend.networks %}
+      - {{ net }}
+{% endfor %}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "--tries=1", "--spider", "http://localhost:{{ gamblock_ai_backend.port }}/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+{% for net in gamblock_ai_backend.networks %}
+  {{ net }}:
+    external: true
+{% endfor %}
+
+volumes:
+  {{ gamblock_ai_backend.name }}_artifacts:

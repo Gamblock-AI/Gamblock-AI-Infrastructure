@@ -1,0 +1,36 @@
+---
+- name: Gamblock-AI server setup
+  hosts: all
+  gather_facts: true
+  become: true
+
+  vars_files:
+    - ../group_vars/all/vars.yml
+    - ../group_vars/all/apps.yml
+    - ../group_vars/all/vault.yml
+
+  pre_tasks:
+    - name: "Ensure server is reachable"
+      ansible.builtin.ping:
+      tags: always
+
+  roles:
+    - role: base-setup
+      when: enable_system | bool
+      tags: [system]
+
+    - role: docker-setup
+      when: enable_docker | bool
+      tags: [infrastructure, docker]
+
+    - role: postgres-setup
+      when: enable_postgres | bool
+      tags: [database, postgres]
+
+    - role: gamblock-ai-backend-setup
+      when: enable_gamblock_ai_backend | bool
+      tags: [application, backend]
+
+    - role: gamblock-ai-website-setup
+      when: enable_gamblock_ai_website | bool
+      tags: [application, website]

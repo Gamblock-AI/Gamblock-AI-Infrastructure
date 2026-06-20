@@ -1,0 +1,3 @@
+# Ansible Vault password file. Copy to .vault_pass and set a strong password.
+# This file is gitignored — never commit the real password.
+change-me-to-a-strong-vault-password

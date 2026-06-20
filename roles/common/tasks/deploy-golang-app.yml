@@ -1,0 +1,75 @@
+---
+# Shared tasks for deploying a Golang application from GHCR.
+# Required vars: app_name, app_image, app_port, app_networks, app_env_template
+- name: "Set install directory"
+  ansible.builtin.set_fact:
+    app_install_dir: "{{ docker_stack_applications }}/{{ app_name }}"
+
+- name: "Create application install directory"
+  ansible.builtin.file:
+    path: "{{ app_install_dir }}"
+    state: directory
+    mode: "0755"
+    owner: "{{ ansible_user | default('root') }}"
+    group: "docker"
+
+- name: "Ensure docker-updates log dir exists"
+  ansible.builtin.file:
+    path: "/var/log/docker-updates"
+    state: directory
+    mode: "0775"
+    owner: "{{ ansible_user | default('root') }}"
+    group: "docker"
+
+- name: "Copy update.sh to application directory"
+  ansible.builtin.copy:
+    src: update.sh
+    dest: "{{ app_install_dir }}/update.sh"
+    mode: "0755"
+    owner: "{{ ansible_user | default('root') }}"
+    group: "docker"
+
+- name: "Render docker-compose.yml"
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ app_install_dir }}/docker-compose.yml"
+    mode: "0644"
+
+- name: "Render .env"
+  ansible.builtin.template:
+    src: .env.j2
+    dest: "{{ app_install_dir }}/.env"
+    mode: "0640"
+    owner: "{{ ansible_user | default('root') }}"
+    group: "docker"
+  no_log: true
+
+- name: "Write GHCR docker-password.txt (shared)"
+  ansible.builtin.copy:
+    content: "{{ vault_docker_password }}\n"
+    dest: "{{ docker_password_file }}"
+    mode: "0640"
+    owner: "{{ ansible_user | default('root') }}"
+    group: "docker"
+  no_log: true
+
+- name: "Log in to GHCR"
+  community.docker.docker_login:
+    registry_url: "{{ github_registry }}"
+    username: "{{ github_username }}"
+    password: "{{ vault_docker_password }}"
+    reauthorize: true
+  no_log: true
+
+- name: "Validate image exists"
+  ansible.builtin.command: "docker manifest inspect {{ app_image }}"
+  register: ghcr_access_check
+  changed_when: false
+  failed_when: ghcr_access_check.rc != 0
+
+- name: "Pull and start {{ app_name }}"
+  ansible.builtin.shell: |
+    cd {{ app_install_dir }} && docker compose pull && docker compose up -d
+  args:
+    executable: /bin/bash
+  changed_when: true

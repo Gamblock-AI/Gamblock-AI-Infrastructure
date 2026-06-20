@@ -1,0 +1,45 @@
+---
+# Base system setup: deploy users, docker group membership, stack dirs.
+- name: "Ensure docker group exists"
+  ansible.builtin.group:
+    name: docker
+    state: present
+
+- name: "Ensure deployer user exists"
+  ansible.builtin.user:
+    name: deployer
+    groups: docker,sudo
+    append: true
+    shell: /bin/bash
+
+- name: "Ensure app-deployer (CI deploy) user exists"
+  ansible.builtin.user:
+    name: app-deployer
+    groups: docker
+    append: true
+    shell: /bin/bash
+    create_home: true
+
+- name: "Authorize app-deployer SSH key"
+  ansible.posix.authorized_key:
+    user: app-deployer
+    key: "{{ vault_app_deployer_ssh_key }}"
+    state: present
+
+- name: "app-deployer can run docker without password (sudoers)"
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/app-deployer
+    content: "app-deployer ALL=(ALL) NOPASSWD: /usr/bin/docker\n"
+    mode: "0440"
+    validate: /usr/sbin/visudo -csf %s
+
+- name: "Create docker-stack base dirs"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: docker
+  loop:
+    - "{{ docker_stack_base }}"
+    - "{{ docker_stack_applications }}"

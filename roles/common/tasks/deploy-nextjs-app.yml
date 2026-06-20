@@ -1,0 +1,6 @@
+---
+# Shared tasks for deploying a Next.js application from GHCR.
+# Reuses the golang deploy tasks (the only difference is the compose/env template
+# provided by the calling role).
+- name: "Include common deploy steps for {{ app_name }}"
+  ansible.builtin.include_tasks: deploy-golang-app.yml
