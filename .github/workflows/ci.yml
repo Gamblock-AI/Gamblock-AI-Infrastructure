@@ -1,0 +1,35 @@
+name: Infrastructure CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify self-contained AI context
+        run: scripts/verify-ai-context.sh
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Install Ansible Galaxy collections
+        run: ansible-galaxy collection install -r requirements.yml
+
+      - name: Lint infrastructure
+        run: make lint

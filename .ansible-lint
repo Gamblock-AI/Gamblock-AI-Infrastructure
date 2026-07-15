@@ -1,6 +1,8 @@
 ---
 exclude_paths:
   - .ansible/
+  - .github/
+  - docs/ai/manifest.yaml
   - venv/
   - group_vars/all/vault.yml
 warn_list:
@@ -8,4 +10,7 @@ warn_list:
   - jinja[spacing]
 skip_list:
   - name[casing]
+  # Existing deployed role paths use hyphens. Renaming them is a separate,
+  # deployment-sensitive migration rather than lint-only cleanup.
+  - role-name
   - var-naming[no-role-prefix]

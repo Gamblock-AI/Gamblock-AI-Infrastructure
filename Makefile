@@ -1,4 +1,4 @@
-.PHONY: help ping check lint deploy deploy-fresh app \
+.PHONY: help ping check check-mode lint verify-context deploy deploy-fresh app \
         vault-encrypt vault-decrypt vault-view vault-edit \
         github-secrets github-secrets-dry cloudflare cloudflare-dry \
         ci-init ssh
@@ -7,6 +7,8 @@ PLAYBOOK = playbooks/server-setup.yml
 INVENTORY = inventory/hosts.ini
 OPTS = -i $(INVENTORY)
 VAULT_FILE = group_vars/all/vault.yml
+LINT_ANSIBLE_CONFIG = $(CURDIR)/ansible-lint.cfg
+LINT_VAULT_FILE = $(CURDIR)/group_vars/all/vault.yml.example
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
@@ -19,8 +21,16 @@ ping: ## Test connection to the server
 check: ## Syntax check the playbook
 	@ansible-playbook $(OPTS) $(PLAYBOOK) --syntax-check
 
+check-mode: check ## Simulate the playbook on the configured host (no diff/secrets)
+	@ansible-playbook $(OPTS) $(PLAYBOOK) --check
+
 lint: ## Lint playbooks and roles
-	@ansible-lint
+	@ANSIBLE_CONFIG=$(LINT_ANSIBLE_CONFIG) \
+		GAMBLOCK_LINT_MODE=1 \
+		GAMBLOCK_LINT_VAULT_FILE="$(LINT_VAULT_FILE)" ansible-lint
+
+verify-context: ## Verify committed AI context files and portability
+	@./scripts/verify-ai-context.sh
 
 deploy: check ## Deploy all roles (idempotent)
 	@ansible-playbook $(OPTS) $(PLAYBOOK)

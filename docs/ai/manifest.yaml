@@ -1,0 +1,35 @@
+---
+schema_version: 1
+context_version: "2026-07-15.2"
+project: gamblock-ai-infrastructure
+scope: repository
+source_of_truth: AGENTS.md
+shared_contracts:
+  proposal_authority: 1
+  proposal_traceability: 1
+  local_ai_lint_policy: 1
+  privacy_boundary: 1
+required_files:
+  - .gitattributes
+  - .agents/skills/verify-gamblock-change/SKILL.md
+  - .agents/skills/verify-gamblock-change/agents/openai.yaml
+  - AGENTS.md
+  - README.md
+  - docs/ai/README.md
+  - docs/ai/manifest.yaml
+  - CLAUDE.md
+  - GEMINI.md
+  - COPILOT.md
+  - .cursorrules
+  - .github/copilot-instructions.md
+  - .github/workflows/ci.yml
+  - .cursor/rules/gamblock-ai.mdc
+  - ansible-lint.cfg
+  - scripts/verify-ai-context.sh
+validation:
+  strict: scripts/verify-ai-context.sh
+  authoring: scripts/verify-ai-context.sh --allow-untracked
+  default_lint: make lint
+proposal_requirements:
+  - PKM-PRIV-001
+  - PKM-PRIV-002

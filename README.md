@@ -1,116 +1,137 @@
 # Gamblock-AI Infrastructure
 
-Ansible IaaC for deploying the Gamblock-AI platform to a VPS: Docker, PostgreSQL,
-and the backend + website containers pulled from GitHub Container Registry (GHCR)
-behind Nginx Proxy Manager.
+Ansible infrastructure for deploying the Gamblock-AI backend, website, and
+PostgreSQL services to a VPS behind Nginx Proxy Manager.
+
+AI workflow context version: `2026-07-15.2`. This repository contains all
+instructions needed to work on it; start with [`AGENTS.md`](AGENTS.md) and the
+index in [`docs/ai/README.md`](docs/ai/README.md).
+
+## Safety boundaries
+
+Gamblock-AI performs AI inference on-device. This deployment must never collect
+or persist DOM text, URLs, domains, screenshots, or browsing history. Only
+aggregate supervision data may reach server-side services.
+
+Commands that deploy, access a vault, open a remote shell, change GitHub
+settings, or mutate Cloudflare DNS require explicit user approval immediately
+before execution. Validation commands do not grant permission to deploy.
 
 ## Structure
 
-```
-ansible.cfg                     # Ansible config (inventory, vault, sudo)
-Makefile                        # Shortcut commands
-requirements.yml / .txt         # Galaxy collections + Python deps
+```text
+ansible.cfg                     # Ansible defaults
+ansible-lint.cfg                # Secret-free lint/CI defaults
+Makefile                        # Validation and operation shortcuts
+requirements.yml / .txt         # Galaxy and Python dependencies
 inventory/hosts.ini             # Target VPS
 group_vars/all/
-  vars.yml                      # Non-sensitive config (domains, ports, images)
-  apps.yml                      # App catalog (backend + website)
-  vault.yml.example             # Secret template -> copy to vault.yml, encrypt
+  vars.yml                      # Non-sensitive settings
+  apps.yml                      # Backend and website container catalog
+  vault.yml                     # Encrypted, tracked Ansible Vault
+  vault.yml.example             # Template for a new environment
 playbooks/server-setup.yml      # Main playbook
-roles/
-  common/                       # update.sh + shared deploy tasks
-  system/base-setup/            # deployer + app-deployer users, dirs
-  infrastructure/docker-setup/  # Docker engine + networks
-  databases/postgres-setup/     # PostgreSQL 16 container
-  applications/
-    gamblock-ai-backend-setup/  # backend compose + .env
-    gamblock-ai-website-setup/  # website compose + .env
+roles/                          # System, Docker, database, and app roles
+scripts/                        # GitHub and Cloudflare helpers
+docs/ai/                        # AI-context index and manifest
 ```
 
 ## Prerequisites
 
-- Ansible 9+ (`pip install -r requirements.txt`)
-- Galaxy collections: `ansible-galaxy collection install -r requirements.yml`
-- SSH key to the VPS (default `~/.ssh/server_ed25519`, set in `ansible.cfg`)
-- A GitHub PAT with `read:packages` scope (for GHCR pulls via `update.sh`)
+- Python and Ansible 9+
+- Python packages from `requirements.txt`
+- Galaxy collections from `requirements.yml`
+- An SSH key available at `~/.ssh/server_ed25519`, or a user-specific override
+  supplied outside Git
+- The correct vault password obtained through an approved, out-of-band channel
 
-## Setup
-
-1. Edit `inventory/hosts.ini` with your VPS IP.
-2. Create `.vault_pass` (already done — holds your vault password):
-   ```sh
-   # .vault_pass exists; edit it if needed
-   ```
-3. Copy the secret template and fill real values, then encrypt:
-   ```sh
-   cp group_vars/all/vault.yml.example group_vars/all/vault.yml
-   # edit vault.yml with real secrets (GHCR token, VPS ssh key, Cloudflare token, ...)
-   make vault-encrypt        # encrypts group_vars/all/vault.yml
-   ```
-   - `make vault-view` — view secrets without decrypting on disk
-   - `make vault-edit` — edit (decrypts in-memory, re-encrypts on save)
-   - `make vault-decrypt` — decrypt to plaintext (only when editing by hand)
-4. Deploy the server:
-   ```sh
-   make deploy
-   ```
-
-## CI/CD cloud configuration (one-shot)
-
-After the server is deployed and the vault is filled, configure GitHub repo
-secrets/variables and Cloudflare DNS from your local machine:
+Install local dependencies:
 
 ```sh
-make ci-init          # sets GitHub secrets + Cloudflare DNS (from vault)
-# or individually:
-make github-secrets   # VPS_HOST/VPS_USER/VPS_KEY/DOCKER_TOKEN + NEXT_PUBLIC_API_URL
-make cloudflare       # A records for api.<domain> + app.<domain> -> VPS IP
+python -m pip install -r requirements.txt
+ansible-galaxy collection install -r requirements.yml
 ```
 
-Dry-run first to preview:
+## Fresh-clone setup
+
+1. Review `inventory/hosts.ini` and replace the example/target host only when
+   you are authorized to work with that environment. The inventory contains no
+   workstation-specific absolute path.
+2. Create the ignored vault-password file locally:
+
+   ```sh
+   cp .vault_pass.example .vault_pass
+   ```
+
+   Replace the placeholder with the approved password. Never commit or print
+   `.vault_pass`.
+3. For the existing environment, keep the tracked `group_vars/all/vault.yml`
+   encrypted and obtain its matching password. Do not copy
+   `vault.yml.example` over it.
+4. For a deliberately new environment only, obtain approval before replacing
+   `vault.yml`, fill the template locally, and encrypt it before any commit.
+5. Run local validation:
+
+   ```sh
+   scripts/verify-ai-context.sh --allow-untracked
+   make lint
+   ```
+
+## Validation and check mode
+
+- `scripts/verify-ai-context.sh` validates committed context and portability.
+- `scripts/verify-ai-context.sh --allow-untracked` is for authoring new context
+  files before they are committed.
+- `make lint` runs `ansible-lint` with the secret-free `ansible-lint.cfg` and
+  placeholder-only `vault.yml.example`, so a fresh clone and CI do not need or
+  open the production vault.
+- `make check` performs local Ansible syntax validation.
+- `make check-mode` contacts the configured VPS and runs the playbook with
+  `--check`. It does not request a deployment, but still requires confirmation
+  of the target and permission for external contact. It intentionally omits
+  `--diff` so rendered secrets are not displayed.
+
+`make lint` is the default AI check. `make check` and `make check-mode` run
+only when explicitly requested; check mode also needs permission for external
+contact. CI may keep additional automatic validation.
+
+## Operations requiring approval
+
+After explicit approval, the relevant commands are:
+
 ```sh
-make github-secrets-dry
-make cloudflare-dry
+make deploy
+make deploy-fresh
+make app APP=gamblock-ai-backend
+make app APP=gamblock-ai-website
 ```
 
-These scripts read everything from `group_vars` (vars.yml + encrypted vault.yml)
-and the inventory — no hardcoded values. Prerequisites: `gh` CLI authenticated
-(`gh auth login`) and `ansible-vault` available.
+Vault commands (`vault-view`, `vault-edit`, `vault-encrypt`, `vault-decrypt`),
+remote access (`ssh`), GitHub secret changes, and Cloudflare changes also require
+explicit approval. Prefer `github-secrets-dry` and `cloudflare-dry` to inspect a
+planned operation, while remembering that dry runs may still access local vault
+data or external APIs.
 
-## Deploy flow
+## Deployment flow
 
-- `make deploy` runs the full playbook (system → docker → postgres → apps).
-- `make app APP=gamblock-ai-backend` deploys one application.
-- App containers pull `ghcr.io/gamblock-ai/<app>:latest` and run via docker-compose.
-- CI auto-deploys: on push to `main`, the backend/website workflows build+push the
-  image to GHCR, then SSH into the VPS and run `./update.sh` to pull + restart.
+- The main playbook configures the base host, Docker, PostgreSQL, backend, and
+  website roles.
+- Application containers pull `ghcr.io/gamblock-ai/<app>:latest`.
+- Backend and website delivery workflows can SSH to the VPS and invoke the
+  installed `update.sh` script after their own tests pass.
+- Nginx Proxy Manager is expected to exist on the shared
+  `nginx_proxy_manager_network`; proxy hosts are managed separately.
 
-## CI/CD secrets (per backend + website repo)
+## CI
 
-Set these GitHub repository secrets for auto-deploy:
-- `VPS_HOST` — server IP
-- `VPS_USER` — `app-deployer`
-- `VPS_KEY` — SSH private key for app-deployer
+Infrastructure CI verifies that the AI-context contract is committed and
+self-contained, installs the declared project requirements, and runs
+`make lint`.
+CI never deploys, opens the vault, or mutates external systems.
 
-GHCR push uses the built-in `GITHUB_TOKEN` (no extra secret). For the website, set
-a repository variable `NEXT_PUBLIC_API_URL` (e.g. `https://api.gamblock-ai.my.id`).
+## AI-context maintenance
 
-## Nginx Proxy Manager
-
-This repo expects Nginx Proxy Manager (NPM) to be running on the VPS with the
-`nginx_proxy_manager_network` Docker network. Configure proxy hosts manually in NPM:
-- `api.<domain>` → `gamblock-ai-backend:8080`
-- `app.<domain>` → `gamblock-ai-website:3000`
-
-## Commands
-
-- `make ping` — test connection
-- `make check` — syntax check
-- `make lint` — ansible-lint
-- `make deploy` — full deploy
-- `make deploy-fresh` — fresh deploy with migrations
-- `make app APP=<name>` — single app (gamblock-ai-backend / gamblock-ai-website)
-- `make ssh` — shell into the server
-- `make vault-encrypt` / `vault-decrypt` / `vault-view` / `vault-edit` — manage secrets
-- `make github-secrets` / `github-secrets-dry` — set GitHub CI secrets
-- `make cloudflare` / `cloudflare-dry` — set Cloudflare DNS
-- `make ci-init` — one-shot GitHub + Cloudflare setup
+`AGENTS.md` is the source of truth. Provider-specific files are intentionally
+thin adapters so rules do not drift. When the context contract changes, update
+the manifest and documentation together and bump the context version. See
+[`docs/ai/README.md`](docs/ai/README.md) for the complete file map.
