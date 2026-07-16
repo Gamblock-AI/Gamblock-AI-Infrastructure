@@ -3,7 +3,7 @@
 Ansible infrastructure for deploying the Gamblock-AI backend, website, and
 PostgreSQL services to a VPS behind Nginx Proxy Manager.
 
-AI workflow context version: `2026-07-15.2`. This repository contains all
+AI workflow context version: `2026-07-16.3`. This repository contains all
 instructions needed to work on it; start with [`AGENTS.md`](AGENTS.md) and the
 index in [`docs/ai/README.md`](docs/ai/README.md).
 
@@ -121,6 +121,14 @@ data or external APIs.
   installed `update.sh` script after their own tests pass.
 - Nginx Proxy Manager is expected to exist on the shared
   `nginx_proxy_manager_network`; proxy hosts are managed separately.
+- The backend template explicitly disables development login and demo records,
+  supplies production notification mode, and mounts controlled artifact/export
+  volumes. Backend startup now rejects missing PostgreSQL, weak JWT secrets, or
+  an invalid AES-256 journal key in production.
+- `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is a public build-time website setting. The
+  website image workflow accepts it from a repository variable, but configuring
+  that external variable still requires separate owner authorization; the
+  runtime Ansible `.env` cannot retrofit it into an already-built Next.js image.
 
 ## CI
 

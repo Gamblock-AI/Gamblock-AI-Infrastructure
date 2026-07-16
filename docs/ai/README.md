@@ -1,6 +1,6 @@
 # AI Context Index
 
-Context version: `2026-07-15.2`
+Context version: `2026-07-16.4`
 
 This repository is intentionally self-contained. A clone does not need a
 parent workspace to discover its product constraints, infrastructure workflow,
@@ -53,3 +53,9 @@ This component is operational support for the PKM prototype. It must not add
 cloud inference or browsing-data collection. `make lint` is the default AI
 check; syntax/check-mode/deployment checks run only on explicit request, and
 external contact still requires authorization.
+
+The backend deployment template keeps `ENABLE_DEV_LOGIN=false` and
+`ENABLE_DEMO_DATA=false`, mounts artifact/export storage, and provides the
+production values required by backend fail-closed configuration validation.
+Public Next.js variables, including Google OAuth's public client ID, are
+build-time image inputs and are not secret runtime Ansible substitutions.

@@ -1,6 +1,6 @@
 # Gamblock-AI Infrastructure — Agent Rules
 
-Context version: `2026-07-15.2`
+Context version: `2026-07-16.4`
 
 This repository is self-contained and requires no external workspace context.
 `AGENTS.md` is the canonical instruction file; provider adapters and the
@@ -18,6 +18,12 @@ context manifest are indexed in `docs/ai/README.md`.
   uses the Android Accessibility Service and Windows SCM auto-restart.
 - Infrastructure may deploy aggregate supervision data only. Never add raw
   browsing data to environment templates, logs, observability, or backups.
+- Production backend templates keep development login/demo data disabled,
+  provide persistent artifact/export volumes, and satisfy fail-closed
+  PostgreSQL/JWT/AES configuration validation.
+- `NEXT_PUBLIC_*` website values are public build-time image inputs, not
+  runtime Ansible secrets. A runtime template cannot change an already-built
+  Next.js bundle.
 
 ## Stack
 
