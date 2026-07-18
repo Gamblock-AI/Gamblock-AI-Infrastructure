@@ -1,6 +1,6 @@
 # Gamblock-AI Infrastructure — Agent Rules
 
-Context version: `2026-07-16.5`
+Context version: `2026-07-18.3`
 
 This repository is self-contained and requires no external workspace context.
 `AGENTS.md` is the canonical instruction file; provider adapters and the
