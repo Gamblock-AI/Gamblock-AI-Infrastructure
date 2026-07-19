@@ -1,0 +1,28 @@
+services:
+  caddy:
+    image: {{ caddy_image }}
+    container_name: gamblock-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - {{ proxy_network }}
+    healthcheck:
+      test: ["CMD", "caddy", "version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  {{ proxy_network }}:
+    external: true
+
+volumes:
+  caddy_data:
+  caddy_config:

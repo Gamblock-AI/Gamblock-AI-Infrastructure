@@ -1,6 +1,6 @@
 # AI Context Index
 
-Context version: `2026-07-20.3`
+Context version: `2026-07-20.4`
 
 This repository is intentionally self-contained. A clone does not need a
 parent workspace to discover its product constraints, infrastructure workflow,
@@ -54,8 +54,11 @@ cloud inference or browsing-data collection. `make lint` is the default AI
 check; syntax/check-mode/deployment checks run only on explicit request, and
 external contact still requires authorization.
 
-The backend deployment template keeps `ENABLE_DEV_LOGIN=false` and
-`ENABLE_DEMO_DATA=false`, mounts artifact/export storage, and provides the
-production values required by backend fail-closed configuration validation.
+The production topology is one root/password/port-22 VPS with a pinned SSH
+host key, Docker, PostgreSQL, and Caddy-managed TLS. The backend deployment
+template keeps `ENABLE_DEV_LOGIN=false` and `ENABLE_DEMO_DATA=false`, mounts
+artifact/export/media/avatar storage, and provides the production values
+required by backend fail-closed configuration validation. Missing private GHCR
+pull or SMTP settings are deliberate pre-deployment gates.
 Public Next.js variables, including Google OAuth's public client ID, are
 build-time image inputs and are not secret runtime Ansible substitutions.

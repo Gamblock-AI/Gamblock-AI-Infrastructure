@@ -1,0 +1,34 @@
+---
+- name: Create Caddy install directory
+  ansible.builtin.file:
+    path: "{{ docker_stack_base }}/caddy"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Render Caddy configuration
+  ansible.builtin.template:
+    src: Caddyfile.j2
+    dest: "{{ docker_stack_base }}/caddy/Caddyfile"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Render Caddy compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ docker_stack_base }}/caddy/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Start Caddy reverse proxy
+  community.docker.docker_compose_v2:
+    project_src: "{{ docker_stack_base }}/caddy"
+    state: present
+    pull: missing
+    recreate: auto
+    remove_orphans: true
+    wait: true
+    wait_timeout: 120

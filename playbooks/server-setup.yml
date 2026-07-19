@@ -1,18 +1,45 @@
 ---
 - name: Gamblock-AI server setup
   hosts: all
-  gather_facts: true
-  become: true
+  gather_facts: false
+  become: false
 
   vars_files:
     - ../group_vars/all/vars.yml
     - ../group_vars/all/apps.yml
     - "{{ lookup('ansible.builtin.env', 'GAMBLOCK_LINT_VAULT_FILE') if lookup('ansible.builtin.env', 'GAMBLOCK_LINT_MODE') == '1' else '../group_vars/all/vault.yml' }}"
 
+  vars:
+    ansible_password: "{{ vault_vps_password }}"
+
   pre_tasks:
-    - name: "Ensure server is reachable"
+    - name: Validate production deployment secrets locally
+      ansible.builtin.assert:
+        that:
+          - vault_vps_password | length >= 12
+          - vault_github_registry_pat | length > 0
+          - vault_postgres_password | length >= 16
+          - vault_gamblock_backend.jwt_access_secret | length >= 64
+          - vault_gamblock_backend.journal_encryption_key | length == 64
+          - vault_gamblock_backend.smtp_host | length > 0
+          - vault_gamblock_backend.smtp_port | int > 0
+          - vault_gamblock_backend.smtp_from | length > 0
+        fail_msg: >-
+          Production secrets are incomplete. Configure the GHCR pull PAT and
+          SMTP values with `make vault-edit` before an application deployment.
+      delegate_to: localhost
+      no_log: true
+      when: not (skip_application_preflight | default(false) | bool)
+      tags: [always]
+
+    - name: Ensure server is reachable
       ansible.builtin.ping:
-      tags: always
+      no_log: true
+      tags: [always, connection]
+
+    - name: Gather target facts
+      ansible.builtin.setup:
+      tags: [always]
 
   roles:
     - role: base-setup
@@ -34,3 +61,7 @@
     - role: gamblock-ai-website-setup
       when: enable_gamblock_ai_website | bool
       tags: [application, website]
+
+    - role: caddy-setup
+      when: enable_caddy | bool
+      tags: [infrastructure, proxy, caddy]

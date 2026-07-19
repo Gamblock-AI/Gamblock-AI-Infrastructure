@@ -7,6 +7,7 @@ services:
     volumes:
       - {{ gamblock_ai_backend.name }}_artifacts:/app/var/artifacts
       - {{ gamblock_ai_backend.name }}_exports:/app/var/exports
+      - {{ gamblock_ai_backend.name }}_media:/app/var/media
     networks:
       {{ '# noqa' }}
 {% for net in gamblock_ai_backend.networks %}
@@ -28,3 +29,4 @@ networks:
 volumes:
   {{ gamblock_ai_backend.name }}_artifacts:
   {{ gamblock_ai_backend.name }}_exports:
+  {{ gamblock_ai_backend.name }}_media:

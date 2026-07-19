@@ -19,7 +19,14 @@ VARS_FILE="$PROJECT_DIR/group_vars/all/vars.yml"
 # Read a simple scalar from vars.yml
 get_var() {
   local key=$1
-  grep "^${key}:" "$VARS_FILE" 2>/dev/null | head -1 | sed -E "s/^${key}:[[:space:]]*//" | tr -d '"' | tr -d "'"
+  python3 -c '
+import sys
+import yaml
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    value = yaml.safe_load(handle).get(sys.argv[2], "")
+print("" if value is None else value)
+' "$VARS_FILE" "$key"
 }
 
 # Read a secret from vault.yml. Tries the encrypted form first (ansible-vault
@@ -36,34 +43,46 @@ _vault_content() {
 # Read a secret from the encrypted vault.yml (decrypts on the fly).
 get_vault_var() {
   local key=$1
-  _vault_content 2>/dev/null | grep "^${key}:" | head -1 | sed -E "s/^${key}:[[:space:]]*//" | tr -d '"' | tr -d "'"
+  _vault_content 2>/dev/null | python3 -c '
+import sys
+import yaml
+
+value = yaml.safe_load(sys.stdin).get(sys.argv[1], "")
+print("" if value is None else value)
+' "$key"
 }
 
 # Read a multi-line secret from vault (e.g. a private key). Prints everything
 # after the key line until a line that looks like a new top-level key.
 get_vault_multiline() {
   local key=$1
-  _vault_content 2>/dev/null | awk -v k="$key" '
-    $0 ~ "^"k":" { found=1; sub("^"k":[[:space:]]*", ""); if ($0 == "|") next; print; next }
-    found && /^[a-z_]+:/ { exit }
-    found { print }
-  '
+  get_vault_var "$key"
 }
 
 # Get VPS IP from inventory
 get_vps_ip() {
-  grep -v "^#" "$PROJECT_DIR/inventory/hosts.ini" | grep -v "^\[" | grep -v "^$" | head -1 | awk '{print $1}'
+  awk '!/^#/ && !/^\[/ && NF { print $1; exit }' "$PROJECT_DIR/inventory/hosts.ini"
 }
 
 # Load a local GitHub token from .env if present (overrides vault for auth).
 load_local_github_token() {
   [ -f "$PROJECT_DIR/.env" ] || return 0
   [ -z "${GH_TOKEN:-}" ] || return 0
-  local token
-  token=$(grep -E '^(GH_TOKEN|GITHUB_TOKEN)=' "$PROJECT_DIR/.env" 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
-  if [ -n "$token" ]; then
-    export GH_TOKEN="$token"
-  fi
+  local line token=""
+  while IFS= read -r line; do
+    case "$line" in
+      GH_TOKEN=*|GITHUB_TOKEN=*)
+        token=${line#*=}
+        token=${token#\"}
+        token=${token%\"}
+        token=${token#\'}
+        token=${token%\'}
+        break
+        ;;
+    esac
+  done < "$PROJECT_DIR/.env"
+  [ -z "$token" ] || export GH_TOKEN="$token"
+  return 0
 }
 
 # Common requirement checks

@@ -36,9 +36,25 @@
     state: started
     enabled: true
 
-- name: "Create nginx proxy network"
+- name: Configure Docker log rotation
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "10m",
+          "max-file": "3"
+        }
+      }
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart docker
+
+- name: Create reverse proxy network
   community.docker.docker_network:
-    name: "{{ nginx_proxy_manager_network }}"
+    name: "{{ proxy_network }}"
     state: present
 
 - name: "Create postgres network"

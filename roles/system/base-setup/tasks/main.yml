@@ -1,45 +1,121 @@
 ---
-# Base system setup: deploy users, docker group membership, stack dirs.
-- name: "Ensure docker group exists"
-  ansible.builtin.group:
-    name: docker
+# Base system setup for the single root-operated VPS.
+- name: Install host safety packages
+  ansible.builtin.apt:
+    name:
+      - fail2ban
+      - ufw
+      - unattended-upgrades
     state: present
+    update_cache: true
 
-- name: "Ensure deployer user exists"
-  ansible.builtin.user:
-    name: deployer
-    groups: docker,sudo
-    append: true
-    shell: /bin/bash
+- name: Set server timezone
+  community.general.timezone:
+    name: Asia/Jakarta
 
-- name: "Ensure app-deployer (CI deploy) user exists"
-  ansible.builtin.user:
-    name: app-deployer
-    groups: docker
-    append: true
-    shell: /bin/bash
-    create_home: true
-
-- name: "Authorize app-deployer SSH key"
-  ansible.posix.authorized_key:
-    user: app-deployer
-    key: "{{ vault_app_deployer_ssh_key }}"
-    state: present
-
-- name: "app-deployer can run docker without password (sudoers)"
+- name: Keep requested root password SSH access on port 22
   ansible.builtin.copy:
-    dest: /etc/sudoers.d/app-deployer
-    content: "app-deployer ALL=(ALL) NOPASSWD: /usr/bin/docker\n"
-    mode: "0440"
-    validate: /usr/sbin/visudo -csf %s
+    dest: /etc/ssh/sshd_config.d/60-gamblock-access.conf
+    content: |
+      PermitRootLogin yes
+      PasswordAuthentication yes
+      PubkeyAuthentication yes
+      Port 22
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/sbin/sshd -t -f %s
+  notify: Restart ssh
 
-- name: "Create docker-stack base dirs"
+- name: Configure SSH brute-force protection
+  ansible.builtin.copy:
+    dest: /etc/fail2ban/jail.d/gamblock-ssh.conf
+    content: |
+      [sshd]
+      enabled = true
+      port = 22
+      maxretry = 5
+      findtime = 10m
+      bantime = 1h
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart fail2ban
+
+- name: Allow SSH through firewall
+  community.general.ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+
+- name: Allow HTTP and HTTPS through firewall
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - "80"
+    - "443"
+
+- name: Allow HTTP/3 through firewall
+  community.general.ufw:
+    rule: allow
+    port: "443"
+    proto: udp
+
+- name: Enable firewall with deny-by-default policy
+  community.general.ufw:
+    state: enabled
+    policy: deny
+    direction: incoming
+
+- name: Check whether swapfile exists
+  ansible.builtin.stat:
+    path: /swapfile
+  register: swapfile_status
+
+- name: Allocate 2 GiB swapfile
+  ansible.builtin.command: fallocate -l 2G /swapfile
+  when: not swapfile_status.stat.exists
+  changed_when: true
+
+- name: Protect swapfile permissions
+  ansible.builtin.file:
+    path: /swapfile
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Inspect active swap devices
+  ansible.builtin.command: swapon --show=NAME --noheadings
+  register: active_swap
+  changed_when: false
+
+- name: Format swapfile
+  ansible.builtin.command: mkswap /swapfile
+  when: not swapfile_status.stat.exists
+  changed_when: true
+
+- name: Activate swapfile
+  ansible.builtin.command: swapon /swapfile
+  when: "'/swapfile' not in active_swap.stdout_lines"
+  changed_when: true
+
+- name: Persist swapfile mount
+  ansible.posix.mount:
+    path: none
+    src: /swapfile
+    fstype: swap
+    opts: sw
+    state: present
+
+- name: Create docker-stack base directories
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
-    mode: "0755"
+    mode: "0750"
     owner: root
-    group: docker
+    group: root
   loop:
     - "{{ docker_stack_base }}"
     - "{{ docker_stack_applications }}"

@@ -1,14 +1,10 @@
 #!/bin/bash
-# Pull the latest image for this application and restart the container.
-# Runs on the VPS (called by CI via SSH, or by ansible). Expects to be run from
-# the application's install dir containing docker-compose.yml.
+# Pull the latest image for this application and restart it. Root is logged in
+# to GHCR once by Ansible, so no plaintext registry password file is needed.
 set -euo pipefail
 
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 COMPOSE_PROJECT_NAME=$(basename "$PWD")
-PASSWORD_FILE="${DOCKER_PASSWORD_FILE:-/opt/docker-stack/docker-password.txt}"
-REGISTRY="${DOCKER_REGISTRY:-ghcr.io}"
-REGISTRY_USER="${DOCKER_REGISTRY_USER:-gamblock-ai}"
 LOG_FILE="/var/log/docker-updates/${COMPOSE_PROJECT_NAME}.log"
 
 mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || true
@@ -31,15 +27,6 @@ for IMAGE in "${COMPOSE_IMAGES[@]}"; do
   OLD_IMAGE_IDS["$IMAGE"]=$(docker image inspect "$IMAGE" --format '{{.Id}}' 2>/dev/null || true)
 done
 
-# Authenticate to the registry.
-if [ -f "$PASSWORD_FILE" ]; then
-  log "Logging in to ${REGISTRY}"
-  cat "$PASSWORD_FILE" | docker login "$REGISTRY" -u "$REGISTRY_USER" --password-stdin \
-    || error_exit "GHCR login failed"
-else
-  log "No password file at ${PASSWORD_FILE}; assuming image is public or already authed"
-fi
-
 # Pull latest images.
 log "Pulling images"
 docker compose -f "$COMPOSE_FILE" pull || error_exit "docker compose pull failed"
@@ -48,8 +35,25 @@ docker compose -f "$COMPOSE_FILE" pull || error_exit "docker compose pull failed
 log "Recreating containers"
 docker compose -f "$COMPOSE_FILE" up -d --force-recreate || error_exit "docker compose up failed"
 
-# Logout for hygiene.
-docker logout "$REGISTRY" >/dev/null 2>&1 || true
+# Do not delete the previous image until every service is running and healthy.
+log "Waiting for services to become ready"
+mapfile -t COMPOSE_CONTAINERS < <(docker compose -f "$COMPOSE_FILE" ps -q)
+[ "${#COMPOSE_CONTAINERS[@]}" -gt 0 ] || error_exit "compose started no containers"
+
+for attempt in $(seq 1 60); do
+  ready=true
+  for container in "${COMPOSE_CONTAINERS[@]}"; do
+    state=$(docker inspect --format '{{.State.Status}}' "$container" 2>/dev/null || true)
+    health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container" 2>/dev/null || true)
+    if [ "$state" != "running" ] || { [ "$health" != "none" ] && [ "$health" != "healthy" ]; }; then
+      ready=false
+      break
+    fi
+  done
+  [ "$ready" = true ] && break
+  [ "$attempt" -eq 60 ] && error_exit "services did not become ready within 180 seconds"
+  sleep 3
+done
 
 # Cleanup old images no longer referenced by a running container.
 log "Cleaning up old images"

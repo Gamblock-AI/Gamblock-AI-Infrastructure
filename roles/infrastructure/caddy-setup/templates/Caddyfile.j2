@@ -1,0 +1,13 @@
+{{ www_domain }} {
+  redir https://{{ primary_domain }}{uri} permanent
+}
+
+{{ primary_domain }} {
+  encode zstd gzip
+  reverse_proxy {{ gamblock_ai_website.name }}:{{ gamblock_ai_website.port }}
+}
+
+{{ api_domain }} {
+  encode zstd gzip
+  reverse_proxy {{ gamblock_ai_backend.name }}:{{ gamblock_ai_backend.port }}
+}

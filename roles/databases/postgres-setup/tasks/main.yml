@@ -8,25 +8,39 @@
     owner: "999"  # postgres uid inside the container
     group: "999"
 
+- name: Create PostgreSQL install directory
+  ansible.builtin.file:
+    path: "{{ docker_stack_base }}/postgres"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
 - name: "Render postgres env file"
   ansible.builtin.template:
     src: postgres.env.j2
     dest: "{{ docker_stack_base }}/postgres/.env"
-    mode: "0640"
+    owner: root
+    group: root
+    mode: "0600"
   no_log: true
 
 - name: "Render postgres docker-compose"
   ansible.builtin.template:
     src: docker-compose.yml.j2
     dest: "{{ docker_stack_base }}/postgres/docker-compose.yml"
+    owner: root
+    group: root
     mode: "0644"
 
 - name: "Start PostgreSQL"
-  ansible.builtin.shell: |
-    cd {{ docker_stack_base }}/postgres && docker compose up -d
-  args:
-    executable: /bin/bash
-  changed_when: true
+  community.docker.docker_compose_v2:
+    project_src: "{{ docker_stack_base }}/postgres"
+    state: present
+    pull: missing
+    remove_orphans: true
+    wait: true
+    wait_timeout: 120
 
 - name: "Wait for PostgreSQL to accept connections"
   ansible.builtin.shell: |

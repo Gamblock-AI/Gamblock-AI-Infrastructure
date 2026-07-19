@@ -1,5 +1,5 @@
-.PHONY: help ping check check-mode lint verify-context deploy deploy-fresh app \
-        vault-encrypt vault-decrypt vault-view vault-edit \
+.PHONY: help ping check check-mode lint verify-context bootstrap deploy app \
+        vault-init vault-encrypt vault-decrypt vault-view vault-edit \
         github-secrets github-secrets-dry cloudflare cloudflare-dry \
         ci-init ssh
 
@@ -15,8 +15,9 @@ help: ## Show this help
 
 # ===== Connection & deploy =====
 
-ping: ## Test connection to the server
-	@ansible $(OPTS) all -m ping
+ping: ## Test the pinned root/password connection to the server
+	@ansible-playbook $(OPTS) $(PLAYBOOK) --tags connection \
+		-e skip_application_preflight=true
 
 check: ## Syntax check the playbook
 	@ansible-playbook $(OPTS) $(PLAYBOOK) --syntax-check
@@ -35,18 +36,29 @@ verify-context: ## Verify committed AI context files and portability
 deploy: check ## Deploy all roles (idempotent)
 	@ansible-playbook $(OPTS) $(PLAYBOOK)
 
-deploy-fresh: check ## Fresh deploy (re-run migrations on backend)
-	@ansible-playbook $(OPTS) $(PLAYBOOK) -e "run_fresh_migrate=true"
+bootstrap: check ## Provision host, Docker, database, and Caddy without apps
+	@ansible-playbook $(OPTS) $(PLAYBOOK) \
+		--tags system,infrastructure,database,proxy \
+		-e skip_application_preflight=true
 
 app: check ## Deploy a single app (APP=gamblock-ai-backend|gamblock-ai-website)
-	@ansible-playbook $(OPTS) $(PLAYBOOK) --tags application -e "app=$(APP)"
+	@case "$(APP)" in \
+		gamblock-ai-backend) tag=backend ;; \
+		gamblock-ai-website) tag=website ;; \
+		*) echo "APP must be gamblock-ai-backend or gamblock-ai-website"; exit 1 ;; \
+	 esac; \
+	 ansible-playbook $(OPTS) $(PLAYBOOK) --tags "$$tag"
 
 ssh: ## SSH into the server
-	@ssh -i ~/.ssh/server_ed25519 deployer@$$(grep -oP '^\d+\.\d+\.\d+\.\d+' $(INVENTORY))
+	@ssh -p 22 -o UserKnownHostsFile=inventory/known_hosts \
+		-o StrictHostKeyChecking=yes root@$$(awk '/^[0-9]/{print $$1; exit}' $(INVENTORY))
 
 # ===== Vault =====
 # Secret file: group_vars/all/vault.yml (encrypted). Never commit the plaintext.
 # The vault password lives in .vault_pass (gitignored).
+
+vault-init: ## Generate a new encrypted production vault
+	@./scripts/init-vault.sh
 
 vault-encrypt: ## Encrypt the secret file ($(VAULT_FILE))
 	@test -f $(VAULT_FILE) || { echo "Run 'cp group_vars/all/vault.yml.example $(VAULT_FILE)' first"; exit 1; }

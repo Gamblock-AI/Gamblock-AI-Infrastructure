@@ -1,6 +1,6 @@
 # Gamblock-AI Infrastructure — Agent Rules
 
-Context version: `2026-07-20.3`
+Context version: `2026-07-20.4`
 
 This repository is self-contained and requires no external workspace context.
 `AGENTS.md` is the canonical instruction file; provider adapters and the
@@ -30,7 +30,7 @@ context manifest are indexed in `docs/ai/README.md`.
 - Ansible 9+ with Ansible Vault for secrets
 - Docker containers for the backend and website, pulled from GHCR
 - PostgreSQL 16
-- Nginx Proxy Manager as the external reverse proxy
+- Caddy 2 as the external reverse proxy with automated TLS
 
 ## Repository structure
 
@@ -39,6 +39,7 @@ ansible.cfg              # inventory, roles, vault, and SSH defaults
 ansible-lint.cfg         # secret-free config used only by lint/CI
 Makefile                 # local validation and explicitly invoked operations
 inventory/hosts.ini      # target VPS host and connection metadata
+inventory/known_hosts    # pinned production host identity
 group_vars/all/
   vars.yml               # non-sensitive configuration
   apps.yml               # application/container catalog
@@ -48,7 +49,7 @@ playbooks/
 roles/
   common/                # shared deploy tasks and update.sh
   system/                # base host configuration
-  infrastructure/        # Docker setup
+  infrastructure/        # Docker and Caddy setup
   databases/             # PostgreSQL setup
   applications/          # backend and website deployments
 scripts/                 # GitHub and Cloudflare helper scripts
@@ -79,7 +80,7 @@ external contact before running it.
 Never run any of the following without explicit user authorization in the
 current conversation:
 
-- Deployment or remote shell: `make deploy`, `make deploy-fresh`, `make app`,
+- Deployment or remote shell: `make bootstrap`, `make deploy`, `make app`,
   `make ssh`
 - Vault access or mutation: `make vault-view`, `make vault-edit`,
   `make vault-encrypt`, `make vault-decrypt`
@@ -95,13 +96,16 @@ State what they access before running them and honor the user's authorization.
 
 - `.vault_pass` and `.env` are local, gitignored files. Never print or commit
   their contents.
+- The production inventory uses only `root`, password authentication, SSH port
+  22, and the pinned host key. Do not add deploy users, authentication keys, or
+  a custom port unless the owner changes this operational decision.
 - `group_vars/all/vault.yml` must remain Ansible-Vault encrypted in Git.
 - Do not overwrite the tracked vault with `vault.yml.example` unless the user
   explicitly intends to initialize a different environment.
 - Keep non-sensitive values in `vars.yml`, container definitions in `apps.yml`,
   and secrets in the encrypted vault.
-- Use user-relative SSH configuration from `ansible.cfg`; never commit an
-  absolute workstation path.
+- Keep SSH host identity in `inventory/known_hosts`; never replace the pinned
+  key from an unverified network observation or commit a workstation path.
 
 ## Change rules
 

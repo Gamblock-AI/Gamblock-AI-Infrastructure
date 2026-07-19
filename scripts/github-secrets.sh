@@ -10,6 +10,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/config.sh
 source "$SCRIPT_DIR/config.sh"
 
 AUTO_CONFIRM=false
@@ -25,26 +26,21 @@ done
 
 echo -e "${BLUE}=== Update GitHub Secrets & Variables ===${NC}"
 
+load_local_github_token
 check_requirements || exit 1
 [ "$DRY_RUN" = true ] || { check_gh_auth || exit 1; }
-load_local_github_token
 
 OWNER=$(get_var "github_owner")
 VPS_IP=$(get_vps_ip)
-CI_USER=$(get_var "ci_deploy_user")
-REPOS=()
-while IFS= read -r line; do
-  REPOS+=("$line")
-done < <(grep -E '^\s*-\s*"' "$VARS_FILE" | sed -E 's/.*"([^"]+)".*/\1/' | grep -iv '^\s*$')
-
-# Secret values (from vault).
-VPS_KEY=$(get_vault_multiline "vault_app_deployer_private_key")
-GHCR_TOKEN=$(get_vault_var "vault_docker_password")
+DEPLOY_REPOS=("Gamblock-AI-Backend" "Gamblock-AI-Website")
+FLUTTER_REPO="Gamblock-AI-Apps"
+VPS_PASSWORD=$(get_vault_var "vault_vps_password")
+[ -n "$VPS_PASSWORD" ] || { echo -e "${RED}vault_vps_password is empty${NC}"; exit 1; }
 
 echo -e "${GREEN}Owner:${NC} $OWNER"
 echo -e "${GREEN}VPS IP:${NC} $VPS_IP"
-echo -e "${GREEN}CI user:${NC} $CI_USER"
-echo -e "${GREEN}Repos:${NC} ${REPOS[*]}"
+echo -e "${GREEN}Deploy repos:${NC} ${DEPLOY_REPOS[*]}"
+echo -e "${GREEN}Release repo:${NC} $FLUTTER_REPO"
 echo ""
 
 if [ "$AUTO_CONFIRM" = false ] && [ "$DRY_RUN" = false ]; then
@@ -73,21 +69,24 @@ set_variable() {
   echo -e "  ${GREEN}var${NC} $name -> $OWNER/$repo"
 }
 
-PRIMARY_DOMAIN=$(get_var "primary_domain")
-API_URL="https://api.$PRIMARY_DOMAIN"
-
-for repo in "${REPOS[@]}"; do
+for repo in "${DEPLOY_REPOS[@]}"; do
   echo -e "${BLUE}-- $OWNER/$repo --${NC}"
-  # Common deploy secrets for all repos that ship a Docker image.
-  set_secret "$repo" "VPS_HOST" "$VPS_IP"
-  set_secret "$repo" "VPS_USER" "$CI_USER"
-  set_secret "$repo" "VPS_KEY" "$VPS_KEY"
-  # GHCR pull token (used by update.sh on the VPS via docker-password.txt).
-  set_secret "$repo" "DOCKER_TOKEN" "$GHCR_TOKEN"
+  set_secret "$repo" "VPS_PASSWORD" "$VPS_PASSWORD"
+  set_variable "$repo" "VPS_HOST" "$VPS_IP"
+  set_variable "$repo" "VPS_SSH_FINGERPRINT" "$(get_var vps_ssh_fingerprint)"
+  set_variable "$repo" "ENABLE_VPS_DEPLOY" "$(get_var github_enable_vps_deploy)"
 done
 
-# Website-specific build variable (NEXT_PUBLIC_API_URL is baked at build time).
-set_variable "Gamblock-AI-Website" "NEXT_PUBLIC_API_URL" "$API_URL"
+set_variable "Gamblock-AI-Website" "NEXT_PUBLIC_API_URL" "https://$(get_var api_domain)"
+set_variable "Gamblock-AI-Website" "NEXT_PUBLIC_GOOGLE_CLIENT_ID" "$(get_var google_web_client_id)"
+
+echo -e "${BLUE}-- $OWNER/$FLUTTER_REPO --${NC}"
+set_variable "$FLUTTER_REPO" "DEV_API_BASE_URL" "$(get_var flutter_development_api_url)"
+set_variable "$FLUTTER_REPO" "PROD_API_BASE_URL" "$(get_var flutter_production_api_url)"
+set_variable "$FLUTTER_REPO" "WEB_BASE_URL" "$(get_var flutter_web_base_url)"
+set_variable "$FLUTTER_REPO" "GOOGLE_WEB_CLIENT_ID" "$(get_var google_web_client_id)"
+set_variable "$FLUTTER_REPO" "GOOGLE_WINDOWS_CLIENT_ID" "$(get_var google_windows_client_id)"
+set_variable "$FLUTTER_REPO" "ENABLE_PRODUCTION_RELEASE" "$(get_var github_enable_production_release)"
 
 echo ""
 echo -e "${GREEN}Done.${NC}"

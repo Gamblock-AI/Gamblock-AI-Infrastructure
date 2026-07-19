@@ -8,12 +8,8 @@ gamblock_ai_backend:
   port: "{{ gamblock_ai_backend_port }}"
   requires_database: true
   networks:
-    - "{{ nginx_proxy_manager_network }}"
+    - "{{ proxy_network }}"
     - "{{ postgres_network }}"
-  proxy:
-    subdomain: "api"
-    forward_host: "gamblock-ai-backend"
-    forward_port: 8080
   env_template: "roles/applications/gamblock-ai-backend-setup/templates/.env.j2"
 
 gamblock_ai_website:
@@ -23,9 +19,5 @@ gamblock_ai_website:
   port: "{{ gamblock_ai_website_port }}"
   requires_database: false
   networks:
-    - "{{ nginx_proxy_manager_network }}"
-  proxy:
-    subdomain: "app"
-    forward_host: "gamblock-ai-website"
-    forward_port: 3000
+    - "{{ proxy_network }}"
   env_template: "roles/applications/gamblock-ai-website-setup/templates/.env.j2"

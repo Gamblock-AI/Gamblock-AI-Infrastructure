@@ -3,10 +3,12 @@
 
 # ---- GitHub Container Registry ----
 github_registry: "ghcr.io"
-github_username: "gamblock-ai"
+github_registry_username: "Alfian57"
 
 # ---- Domains ----
-primary_domain: "gamblock-ai.my.id"
+primary_domain: "gamblock-ai.com"
+www_domain: "www.gamblock-ai.com"
+api_domain: "api.gamblock-ai.com"
 
 # ---- Application ports (internal container ports) ----
 gamblock_ai_backend_port: 8080
@@ -15,11 +17,13 @@ gamblock_ai_website_port: 3000
 # ---- Docker stack paths ----
 docker_stack_base: "/opt/docker-stack"
 docker_stack_applications: "{{ docker_stack_base }}/applications"
-docker_password_file: "{{ docker_stack_base }}/docker-password.txt"
 
 # ---- Docker networks ----
-nginx_proxy_manager_network: "nginx_proxy_manager_network"
+proxy_network: "gamblock_proxy_network"
 postgres_network: "postgres_network"
+
+# ---- Caddy ----
+caddy_image: "caddy:2.11.4-alpine"
 
 # ---- PostgreSQL ----
 postgres_image: "postgres:16-alpine"
@@ -28,27 +32,44 @@ postgres_port: 5432
 gamblock_db_name: "gamblock"
 gamblock_db_username: "gamblock"
 
+# ---- Public OAuth client identifiers (not secrets) ----
+google_web_client_id: "1073107282498-ii94s89dupci6gbmj1rsmd2dhjpa2bjs.apps.googleusercontent.com"
+google_windows_client_id: "1073107282498-4gnqge1tg7q23pbhkghamtdqpecqhh66.apps.googleusercontent.com"
+
 # ---- Role toggles ----
 enable_system: true
 enable_docker: true
 enable_postgres: true
 enable_gamblock_ai_backend: true
 enable_gamblock_ai_website: true
+enable_caddy: true
 
 # ---- GitHub (org repos for CI secrets/variables) ----
 github_owner: "Gamblock-AI"
 github_repos:
   - "Gamblock-AI-Backend"
   - "Gamblock-AI-Website"
-# CI deploy user on the VPS (used as VPS_USER secret)
-ci_deploy_user: "app-deployer"
+  - "Gamblock-AI-Apps"
+
+# Deploy remains disabled in CI until the first successful Ansible bootstrap.
+github_enable_vps_deploy: "false"
+github_enable_production_release: "false"
+vps_ssh_fingerprint: "SHA256:wCxyEdXVYB51pvUIf6n11oup7QetQgcAIIrCEvwjEbk"
+
+# ---- Flutter public environment configuration ----
+flutter_development_api_url: "https://thankful-midge-noble.ngrok-free.app"
+flutter_production_api_url: "https://api.gamblock-ai.com"
+flutter_web_base_url: "https://gamblock-ai.com"
 
 # ---- Cloudflare DNS ----
-cloudflare_zone_name: "gamblock-ai.my.id"
+cloudflare_zone_name: "gamblock-ai.com"
 cloudflare_records:
-  - name: "api"
+  - name: "@"
     type: "A"
     proxied: true
-  - name: "app"
+  - name: "www"
+    type: "A"
+    proxied: true
+  - name: "api"
     type: "A"
     proxied: true
