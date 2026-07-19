@@ -3,7 +3,7 @@
 Ansible infrastructure for deploying the Gamblock-AI backend, website, and
 PostgreSQL services to a VPS behind Nginx Proxy Manager.
 
-AI workflow context version: `2026-07-18.3`. This repository contains all
+AI workflow context version: `2026-07-19.1`. This repository contains all
 instructions needed to work on it; start with [`AGENTS.md`](AGENTS.md) and the
 index in [`docs/ai/README.md`](docs/ai/README.md).
 
