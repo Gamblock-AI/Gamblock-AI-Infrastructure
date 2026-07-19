@@ -21,12 +21,9 @@
           - vault_postgres_password | length >= 16
           - vault_gamblock_backend.jwt_access_secret | length >= 64
           - vault_gamblock_backend.journal_encryption_key | length == 64
-          - vault_gamblock_backend.smtp_host | length > 0
-          - vault_gamblock_backend.smtp_port | int > 0
-          - vault_gamblock_backend.smtp_from | length > 0
         fail_msg: >-
-          Production secrets are incomplete. Configure the GHCR pull PAT and
-          SMTP values with `make vault-edit` before an application deployment.
+          Production core secrets are incomplete. Configure the GHCR pull PAT
+          and database/JWT/AES values before an application deployment.
       delegate_to: localhost
       no_log: true
       when: not (skip_application_preflight | default(false) | bool)

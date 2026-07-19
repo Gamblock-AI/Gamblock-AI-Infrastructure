@@ -66,12 +66,12 @@ Normal application deployment intentionally stops before remote changes until
 all of these are configured in the encrypted vault:
 
 - a GitHub PAT with `read:packages` for private GHCR pulls;
-- production SMTP host, port, and sender (plus username/password when the
-  provider requires authentication);
 - valid PostgreSQL, JWT, and 64-character journal encryption values.
 
-WhatsApp remains optional because the authoritative partner inbox still works
-without provider delivery. The Cloudflare helper separately requires a token
+SMTP and WhatsApp are optional delivery adapters. Without them, the stack still
+deploys in production mode but email verification/reset/export notifications
+and WhatsApp delivery remain unavailable; demo codes stay disabled. The
+Cloudflare helper separately requires a token
 with Zone Read, DNS Edit, and Zone Settings Edit for `gamblock-ai.com`.
 
 ## Authorized operation sequence
@@ -90,8 +90,9 @@ third-party application gates. `deploy` is idempotent and deploys the complete
 stack. `app` now selects the requested role instead of redeploying both apps.
 
 The backend template disables development login/demo data, uses one PostgreSQL
-password consistently, includes web and Windows Google audiences, requires
-SMTP, and mounts artifact, export, education-media, and avatar storage. The
+password consistently, includes web and Windows Google audiences, keeps
+delivery providers optional, and mounts artifact, export, education-media, and
+avatar storage. The
 website's public API and Google client ID are Docker build-time GitHub
 variables; Ansible cannot retrofit them into an already-built Next.js image.
 

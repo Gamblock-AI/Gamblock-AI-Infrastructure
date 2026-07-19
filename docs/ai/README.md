@@ -58,8 +58,9 @@ The production topology is one root/password/port-22 VPS with a pinned SSH
 host key, Docker, PostgreSQL, and Caddy-managed TLS. The backend deployment
 template keeps `ENABLE_DEV_LOGIN=false` and `ENABLE_DEMO_DATA=false`, mounts
 artifact/export/media/avatar storage, and provides the production values
-required by backend fail-closed configuration validation. Missing private GHCR
-pull or SMTP settings are deliberate pre-deployment gates.
+required by backend fail-closed core configuration validation. A missing
+private-GHCR pull token remains a pre-deployment gate; SMTP and WhatsApp are
+optional delivery adapters and missing values disable only their workflows.
 Public Next.js variables, including Google OAuth's public client ID, are
 build-time image inputs and are not secret runtime Ansible substitutions.
 
@@ -67,6 +68,6 @@ Production-host evidence on 2026-07-20: the root/password/pinned-host-key
 connection passed and the idempotent bootstrap completed on the configured
 VPS. UFW, fail2ban, unattended upgrades, a 2 GiB swapfile, Docker, healthy
 PostgreSQL 16, and healthy Caddy 2.11.4 are active. Application deployment is
-still blocked intentionally until SMTP production values are configured and
-the current backend/website images are published to GHCR; DNS mutation is a
-separate authorized operation.
+still waiting for the current backend/website images to be published to GHCR;
+DNS mutation is a separate authorized operation. SMTP and WhatsApp are not
+deployment blockers.
