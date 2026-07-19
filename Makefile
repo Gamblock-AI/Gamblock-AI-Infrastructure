@@ -1,5 +1,5 @@
 .PHONY: help ping check check-mode lint verify-context bootstrap deploy app \
-        vault-init vault-encrypt vault-decrypt vault-view vault-edit \
+        vault-init vault-integrations vault-encrypt vault-decrypt vault-view vault-edit \
         github-secrets github-secrets-dry cloudflare cloudflare-dry \
         ci-init ssh
 
@@ -59,6 +59,9 @@ ssh: ## SSH into the server
 
 vault-init: ## Generate a new encrypted production vault
 	@./scripts/init-vault.sh
+
+vault-integrations: ## Securely update GHCR and Cloudflare tokens in the vault
+	@./scripts/update-vault-integrations.sh
 
 vault-encrypt: ## Encrypt the secret file ($(VAULT_FILE))
 	@test -f $(VAULT_FILE) || { echo "Run 'cp group_vars/all/vault.yml.example $(VAULT_FILE)' first"; exit 1; }

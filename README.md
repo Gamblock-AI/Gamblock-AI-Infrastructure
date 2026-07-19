@@ -51,7 +51,9 @@ scripts/verify-ai-context.sh --allow-untracked
 `group_vars/all/vault.yml`. For a deliberately new environment, `make
 vault-init` prompts for the current VPS root password, generates independent
 PostgreSQL/JWT/AES values, and encrypts the result immediately. Add remaining
-credentials with `make vault-edit`; never keep a plaintext vault.
+credentials with `make vault-edit`, or update only the GHCR and Cloudflare
+tokens without opening an editor using `make vault-integrations`. Never keep a
+plaintext vault.
 
 `make lint` uses only `vault.yml.example`. `make check` is local syntax
 validation. `make ping`, `make check-mode`, `make bootstrap`, deployment,
