@@ -8,6 +8,7 @@
       - gnupg
       - python3-docker
     update_cache: true
+    lock_timeout: 600
 
 - name: "Add Docker GPG key"
   ansible.builtin.get_url:
@@ -29,6 +30,7 @@
       - docker-buildx-plugin
       - docker-compose-plugin
     update_cache: true
+    lock_timeout: 600
 
 - name: "Ensure docker service is enabled and running"
   ansible.builtin.service:

@@ -62,3 +62,11 @@ required by backend fail-closed configuration validation. Missing private GHCR
 pull or SMTP settings are deliberate pre-deployment gates.
 Public Next.js variables, including Google OAuth's public client ID, are
 build-time image inputs and are not secret runtime Ansible substitutions.
+
+Production-host evidence on 2026-07-20: the root/password/pinned-host-key
+connection passed and the idempotent bootstrap completed on the configured
+VPS. UFW, fail2ban, unattended upgrades, a 2 GiB swapfile, Docker, healthy
+PostgreSQL 16, and healthy Caddy 2.11.4 are active. Application deployment is
+still blocked intentionally until SMTP production values are configured and
+the current backend/website images are published to GHCR; DNS mutation is a
+separate authorized operation.

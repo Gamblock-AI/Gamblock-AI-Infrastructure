@@ -34,7 +34,6 @@
 
     - name: Ensure server is reachable
       ansible.builtin.ping:
-      no_log: true
       tags: [always, connection]
 
     - name: Gather target facts

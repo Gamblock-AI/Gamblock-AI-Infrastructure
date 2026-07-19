@@ -8,6 +8,7 @@
       - unattended-upgrades
     state: present
     update_cache: true
+    lock_timeout: 600
 
 - name: Set server timezone
   community.general.timezone:
