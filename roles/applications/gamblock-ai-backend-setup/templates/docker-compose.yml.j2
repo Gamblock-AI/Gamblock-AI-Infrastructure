@@ -14,7 +14,7 @@ services:
       - {{ net }}
 {% endfor %}
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "--tries=1", "--spider", "http://localhost:{{ gamblock_ai_backend.port }}/healthz"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "--tries=1", "http://localhost:{{ gamblock_ai_backend.port }}/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3
