@@ -22,7 +22,7 @@
 
 - name: "Copy update.sh to application directory"
   ansible.builtin.copy:
-    src: update.sh
+    src: ../files/update.sh
     dest: "{{ app_install_dir }}/update.sh"
     mode: "0755"
     owner: root
@@ -65,7 +65,6 @@
     service: "{{ item }}"
     profiles: "{{ app_prepare_profiles | default([]) }}"
     cleanup: true
-    interactive: false
     no_deps: true
   loop: "{{ app_prepare_services | default([]) }}"
 

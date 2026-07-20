@@ -1,0 +1,35 @@
+---
+- name: Test healthcheck commands
+  hosts: all
+  tasks:
+    - name: Test localhost
+      community.docker.docker_container_exec:
+        container: gamblock-ai-backend
+        command: wget -qO- --tries=1 --spider http://localhost:8080/healthz
+      register: res1
+      ignore_errors: true
+
+    - name: Test 127.0.0.1
+      community.docker.docker_container_exec:
+        container: gamblock-ai-backend
+        command: wget -qO- --tries=1 --spider http://127.0.0.1:8080/healthz
+      register: res2
+      ignore_errors: true
+
+    - name: Test wget output
+      community.docker.docker_container_exec:
+        container: gamblock-ai-backend
+        command: wget -qO- http://127.0.0.1:8080/healthz
+      register: res3
+      ignore_errors: true
+
+    - name: Test wget no spider
+      community.docker.docker_container_exec:
+        container: gamblock-ai-backend
+        command: wget -q http://127.0.0.1:8080/healthz -O /dev/null
+      register: res4
+      ignore_errors: true
+
+    - name: Show results
+      ansible.builtin.debug:
+        msg: "localhost: {{ res1.rc }} {{ res1.stderr }}\n127.0.0.1: {{ res2.rc }} {{ res2.stderr }}\nwget output: {{ res3.rc }} {{ res3.stdout }} {{ res3.stderr }}\nwget no spider: {{ res4.rc }} {{ res4.stderr }}"

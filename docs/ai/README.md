@@ -74,8 +74,10 @@ Ansible or deployment updates.
 Production-host evidence on 2026-07-20: the root/password/pinned-host-key
 connection passed and the idempotent bootstrap completed on the configured
 VPS. UFW, fail2ban, unattended upgrades, a 2 GiB swapfile, Docker, healthy
-PostgreSQL 16, and healthy Caddy 2.11.4 are active. Application deployment is
-still waiting for the current backend/website images to be published to GHCR.
-DNS reconciliation and public health verification are now part of the
-authorized `make deploy` operation. SMTP and WhatsApp are not deployment
-blockers.
+PostgreSQL 16, and healthy Caddy 2.11.4 are active. The current website image
+starts Next.js successfully, but its Compose health probe must use
+`127.0.0.1` rather than `localhost`: the container resolves `localhost` to
+IPv6 first while Next.js listens on IPv4. The image and Compose templates now
+use the explicit IPv4 loopback address. DNS reconciliation and public health
+verification are part of the authorized `make deploy` operation. SMTP and
+WhatsApp are not deployment blockers.

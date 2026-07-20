@@ -1,0 +1,11 @@
+---
+- name: Test healthz
+  hosts: all
+  tasks:
+    - name: Run wget inside container
+      ansible.builtin.command: docker exec gamblock-ai-backend wget -qO- --tries=1 --spider http://localhost:8080/healthz
+      register: result
+      ignore_errors: true
+    - name: Show output
+      ansible.builtin.debug:
+        msg: "RC: {{ result.rc }}\nSTDOUT: {{ result.stdout }}\nSTDERR: {{ result.stderr }}"
