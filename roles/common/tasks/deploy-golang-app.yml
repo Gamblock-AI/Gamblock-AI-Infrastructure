@@ -53,11 +53,27 @@
     reauthorize: true
   no_log: true
 
-- name: "Pull and start {{ app_name }}"
+- name: Pull application images
+  community.docker.docker_compose_v2_pull:
+    project_src: "{{ app_install_dir }}"
+    policy: always
+    profiles: "{{ app_prepare_profiles | default([]) }}"
+
+- name: Run application preparation service
+  community.docker.docker_compose_v2_run:
+    project_src: "{{ app_install_dir }}"
+    service: "{{ item }}"
+    profiles: "{{ app_prepare_profiles | default([]) }}"
+    cleanup: true
+    interactive: false
+    no_deps: true
+  loop: "{{ app_prepare_services | default([]) }}"
+
+- name: "Start {{ app_name }}"
   community.docker.docker_compose_v2:
     project_src: "{{ app_install_dir }}"
     state: present
-    pull: always
+    pull: never
     recreate: auto
     remove_orphans: true
     wait: true

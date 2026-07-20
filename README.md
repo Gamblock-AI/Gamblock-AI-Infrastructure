@@ -3,7 +3,7 @@
 Ansible deployment for the Gamblock-AI backend, website, PostgreSQL, and Caddy
 on one Ubuntu VPS.
 
-AI workflow context version: `2026-07-20.4`. Start with [`AGENTS.md`](AGENTS.md)
+AI workflow context version: `2026-07-20.5`. Start with [`AGENTS.md`](AGENTS.md)
 and [`docs/ai/README.md`](docs/ai/README.md).
 
 ## Production shape
@@ -34,7 +34,7 @@ roles/infrastructure/{docker-setup,caddy-setup}/
 roles/databases/postgres-setup/
 roles/applications/
 roles/common/files/update.sh
-scripts/{init-vault,github-secrets,cloudflare-dns}.sh
+scripts/{init-vault,github-secrets,cloudflare-dns,verify-production}.sh
 ```
 
 ## Local setup and validation
@@ -86,13 +86,19 @@ make ssh
 ```
 
 `bootstrap` provisions the host, Docker, PostgreSQL, and Caddy without the
-third-party application gates. `deploy` is idempotent and deploys the complete
-stack. `app` now selects the requested role instead of redeploying both apps.
+third-party application gates. `deploy` is the one-command production path: it
+updates Cloudflare DNS/strict SSL, provisions the complete stack, creates a
+pre-deploy PostgreSQL backup, runs `migrate-up` and the production-safe seeder,
+starts the backend/website/Caddy, and waits until the public website and API
+health endpoint both answer successfully. `app` selects the requested role;
+the backend role also performs backup, migration, and safe seeding.
 
 The backend template disables development login/demo data, uses one PostgreSQL
 password consistently, includes web and Windows Google audiences, keeps
 delivery providers optional, and mounts artifact, export, education-media, and
-avatar storage. The
+avatar storage. Its `tools` profile exposes `migrate-up`, guarded
+`migrate-down`, and `seeder`; automatic deployment calls only migrate-up and
+the production-safe seeder. Pre-deploy backups are retained for 14 days. The
 website's public API and Google client ID are Docker build-time GitHub
 variables; Ansible cannot retrofit them into an already-built Next.js image.
 

@@ -1,5 +1,13 @@
 ---
 # Deploy PostgreSQL as a Docker container on the postgres network.
+- name: Create PostgreSQL install directory
+  ansible.builtin.file:
+    path: "{{ docker_stack_base }}/postgres"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
 - name: "Create postgres data dir"
   ansible.builtin.file:
     path: "{{ docker_stack_base }}/postgres/data"
@@ -8,13 +16,13 @@
     owner: "999"  # postgres uid inside the container
     group: "999"
 
-- name: Create PostgreSQL install directory
+- name: Create PostgreSQL backup directory
   ansible.builtin.file:
-    path: "{{ docker_stack_base }}/postgres"
+    path: "{{ docker_stack_base }}/postgres/backups"
     state: directory
     owner: root
     group: root
-    mode: "0750"
+    mode: "0700"
 
 - name: "Render postgres env file"
   ansible.builtin.template:

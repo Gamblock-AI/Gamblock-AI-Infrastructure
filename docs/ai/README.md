@@ -1,6 +1,6 @@
 # AI Context Index
 
-Context version: `2026-07-20.4`
+Context version: `2026-07-20.5`
 
 This repository is intentionally self-contained. A clone does not need a
 parent workspace to discover its product constraints, infrastructure workflow,
@@ -64,10 +64,18 @@ optional delivery adapters and missing values disable only their workflows.
 Public Next.js variables, including Google OAuth's public client ID, are
 build-time image inputs and are not secret runtime Ansible substitutions.
 
+The complete `make deploy` path reconciles Cloudflare DNS before Caddy
+certificate issuance, snapshots PostgreSQL, runs the image's migrate-up and
+production-safe seeder one-shot services, starts the applications, and waits
+for both public HTTPS endpoints. Backups older than 14 days are removed.
+Migrate-down exists as a guarded manual tool only and is never invoked by
+Ansible or deployment updates.
+
 Production-host evidence on 2026-07-20: the root/password/pinned-host-key
 connection passed and the idempotent bootstrap completed on the configured
 VPS. UFW, fail2ban, unattended upgrades, a 2 GiB swapfile, Docker, healthy
 PostgreSQL 16, and healthy Caddy 2.11.4 are active. Application deployment is
-still waiting for the current backend/website images to be published to GHCR;
-DNS mutation is a separate authorized operation. SMTP and WhatsApp are not
-deployment blockers.
+still waiting for the current backend/website images to be published to GHCR.
+DNS reconciliation and public health verification are now part of the
+authorized `make deploy` operation. SMTP and WhatsApp are not deployment
+blockers.

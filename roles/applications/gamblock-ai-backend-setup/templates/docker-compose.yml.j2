@@ -20,6 +20,32 @@ services:
       retries: 3
       start_period: 10s
 
+  migrate-up:
+    image: {{ gamblock_ai_backend.image }}
+    profiles: ["tools"]
+    entrypoint: ["/app/migrate-up"]
+    env_file: .env
+    networks:
+      - {{ postgres_network }}
+
+  migrate-down:
+    image: {{ gamblock_ai_backend.image }}
+    profiles: ["tools"]
+    entrypoint: ["/app/migrate-down"]
+    env_file: .env
+    networks:
+      - {{ postgres_network }}
+
+  seeder:
+    image: {{ gamblock_ai_backend.image }}
+    profiles: ["tools"]
+    entrypoint: ["/app/seeder"]
+    env_file: .env
+    volumes:
+      - {{ gamblock_ai_backend.name }}_media:/app/var/media
+    networks:
+      - {{ postgres_network }}
+
 networks:
 {% for net in gamblock_ai_backend.networks %}
   {{ net }}:

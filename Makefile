@@ -33,8 +33,10 @@ lint: ## Lint playbooks and roles
 verify-context: ## Verify committed AI context files and portability
 	@./scripts/verify-ai-context.sh
 
-deploy: check ## Deploy all roles (idempotent)
+deploy: check ## Prepare DNS/database, deploy the full stack, and verify production
+	@./scripts/cloudflare-dns.sh
 	@ansible-playbook $(OPTS) $(PLAYBOOK)
+	@./scripts/verify-production.sh
 
 bootstrap: check ## Provision host, Docker, database, and Caddy without apps
 	@ansible-playbook $(OPTS) $(PLAYBOOK) \

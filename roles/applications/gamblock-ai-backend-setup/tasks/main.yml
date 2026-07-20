@@ -1,7 +1,40 @@
 ---
+- name: Back up PostgreSQL before backend preparation
+  community.docker.docker_container_exec:
+    container: "{{ postgres_container_name }}"
+    argv:
+      - pg_dump
+      - --username={{ gamblock_db_username }}
+      - --dbname={{ gamblock_db_name }}
+      - --format=custom
+      - --file=/backups/pre-deploy-{{ ansible_date_time.iso8601_basic_short }}.dump
+    timeout: 180
+  changed_when: true
+
+- name: Find expired pre-deploy database backups
+  ansible.builtin.find:
+    paths: "{{ docker_stack_base }}/postgres/backups"
+    patterns: "*.dump"
+    age: "{{ postgres_backup_retention_days }}d"
+    file_type: file
+  register: expired_postgres_backups
+
+- name: Remove expired pre-deploy database backups
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ expired_postgres_backups.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+
 - name: "Deploy Gamblock-AI backend"
   ansible.builtin.include_tasks: ../../common/tasks/deploy-golang-app.yml
   vars:
     app_name: "{{ gamblock_ai_backend.name }}"
     app_image: "{{ gamblock_ai_backend.image }}"
     app_port: "{{ gamblock_ai_backend.port }}"
+    app_prepare_profiles:
+      - tools
+    app_prepare_services:
+      - migrate-up
+      - seeder

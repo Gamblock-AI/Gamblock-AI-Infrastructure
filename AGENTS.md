@@ -1,6 +1,6 @@
 # Gamblock-AI Infrastructure — Agent Rules
 
-Context version: `2026-07-20.4`
+Context version: `2026-07-20.5`
 
 This repository is self-contained and requires no external workspace context.
 `AGENTS.md` is the canonical instruction file; provider adapters and the
@@ -72,6 +72,11 @@ sets both `GAMBLOCK_LINT_MODE=1` and `GAMBLOCK_LINT_VAULT_FILE` for that one
 process; normal playbook commands default to the encrypted
 `group_vars/all/vault.yml`. Never export the lint-mode variables for an
 operational command.
+
+`make deploy` is the complete production path: it reconciles Cloudflare DNS,
+provisions the host, snapshots PostgreSQL, runs backend migrate-up and the
+production-safe seeder, starts both applications and Caddy, then waits for the
+public website and API health endpoints. It never invokes migrate-down.
 
 `make check-mode` contacts the configured host but asks Ansible to simulate the
 playbook with `--check`; confirm the intended inventory and permission to make

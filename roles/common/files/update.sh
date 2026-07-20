@@ -6,6 +6,7 @@ set -euo pipefail
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 COMPOSE_PROJECT_NAME=$(basename "$PWD")
 LOG_FILE="/var/log/docker-updates/${COMPOSE_PROJECT_NAME}.log"
+POSTGRES_CONTAINER_NAME="${POSTGRES_CONTAINER_NAME:-postgres-db}"
 
 mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || true
 
@@ -30,6 +31,23 @@ done
 # Pull latest images.
 log "Pulling images"
 docker compose -f "$COMPOSE_FILE" pull || error_exit "docker compose pull failed"
+
+# The backend compose file exposes guarded one-shot database tools. Website
+# compose files have no migrate-up service and skip this entire block.
+if docker compose -f "$COMPOSE_FILE" config --services | grep -qx 'migrate-up'; then
+  log "Backing up PostgreSQL"
+  docker exec "$POSTGRES_CONTAINER_NAME" sh -c \
+    'pg_dump --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --format=custom --file="/backups/pre-update-$(date +%Y%m%dT%H%M%S).dump"' \
+    || error_exit "database backup failed"
+
+  log "Applying database migrations"
+  docker compose -f "$COMPOSE_FILE" --profile tools run --rm --no-deps migrate-up \
+    || error_exit "database migration failed"
+
+  log "Installing production-safe seed defaults"
+  docker compose -f "$COMPOSE_FILE" --profile tools run --rm --no-deps seeder \
+    || error_exit "database seeding failed"
+fi
 
 # Recreate containers with the new image.
 log "Recreating containers"

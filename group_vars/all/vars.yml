@@ -31,6 +31,7 @@ postgres_container_name: "postgres-db"
 postgres_port: 5432
 gamblock_db_name: "gamblock"
 gamblock_db_username: "gamblock"
+postgres_backup_retention_days: 14
 
 # ---- Public OAuth client identifiers (not secrets) ----
 google_web_client_id: "1073107282498-ii94s89dupci6gbmj1rsmd2dhjpa2bjs.apps.googleusercontent.com"

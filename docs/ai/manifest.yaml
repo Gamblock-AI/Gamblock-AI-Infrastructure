@@ -1,6 +1,6 @@
 ---
 schema_version: 1
-context_version: "2026-07-20.4"
+context_version: "2026-07-20.5"
 project: gamblock-ai-infrastructure
 scope: repository
 source_of_truth: AGENTS.md
@@ -25,6 +25,7 @@ required_files:
   - .github/workflows/ci.yml
   - .cursor/rules/gamblock-ai.mdc
   - ansible-lint.cfg
+  - scripts/verify-production.sh
   - scripts/verify-ai-context.sh
 validation:
   strict: scripts/verify-ai-context.sh
