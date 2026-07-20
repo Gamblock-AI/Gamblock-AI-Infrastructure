@@ -112,7 +112,7 @@ make cloudflare
 ```
 
 GitHub configuration stores only `VPS_PASSWORD` as an Actions secret. Host,
-fingerprint, public URLs, OAuth client IDs, and enable/disable gates are Actions
+public URLs, OAuth client IDs, and enable/disable gates are Actions
 variables. `ENABLE_VPS_DEPLOY` defaults to `false` until the first bootstrap is
 verified. Cloudflare dry-run is local-only and does not require or contact the
 API.

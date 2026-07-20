@@ -55,7 +55,6 @@ github_repos:
 # Deploy remains disabled in CI until the first successful Ansible bootstrap.
 github_enable_vps_deploy: "true"
 github_enable_production_release: "false"
-vps_ssh_fingerprint: "SHA256:wCxyEdXVYB51pvUIf6n11oup7QetQgcAIIrCEvwjEbk"
 
 # ---- Flutter public environment configuration ----
 flutter_development_api_url: "https://thankful-midge-noble.ngrok-free.app"

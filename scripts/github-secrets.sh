@@ -73,7 +73,6 @@ for repo in "${DEPLOY_REPOS[@]}"; do
   echo -e "${BLUE}-- $OWNER/$repo --${NC}"
   set_secret "$repo" "VPS_PASSWORD" "$VPS_PASSWORD"
   set_variable "$repo" "VPS_HOST" "$VPS_IP"
-  set_variable "$repo" "VPS_SSH_FINGERPRINT" "$(get_var vps_ssh_fingerprint)"
   set_variable "$repo" "ENABLE_VPS_DEPLOY" "$(get_var github_enable_vps_deploy)"
 done
 
