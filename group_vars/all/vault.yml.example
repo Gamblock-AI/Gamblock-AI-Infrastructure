@@ -16,14 +16,9 @@ vault_postgres_password: "change-this-strong-postgres-password"
 vault_gamblock_backend:
   jwt_access_secret: "generate-with-openssl-rand-hex-32"
   journal_encryption_key: "generate-with-openssl-rand-hex-32"
-  smtp_host: ""
-  smtp_port: 0
-  smtp_username: ""
-  smtp_password: ""
-  smtp_from: ""
-  whatsapp_api_key: ""
-  whatsapp_phone_id: ""
-  whatsapp_base_url: "https://graph.facebook.com/v18.0"
+  fonnte_token: ""
+  fonnte_base_url: "https://api.fonnte.com"
+  fonnte_country_code: "62"
 
 # ---- Cloudflare API ----
 vault_cloudflare_api_token: ""

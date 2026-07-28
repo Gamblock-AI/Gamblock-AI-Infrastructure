@@ -45,14 +45,9 @@ chmod 600 "$TEMP_FILE"
   echo "vault_gamblock_backend:"
   printf '  jwt_access_secret: %s\n' "$(yaml_quote "$(openssl rand -hex 32)")"
   printf '  journal_encryption_key: %s\n' "$(yaml_quote "$(openssl rand -hex 32)")"
-  printf '  smtp_host: %s\n' "$(yaml_quote "${GAMBLOCK_SMTP_HOST:-}")"
-  printf '  smtp_port: %s\n' "${GAMBLOCK_SMTP_PORT:-0}"
-  printf '  smtp_username: %s\n' "$(yaml_quote "${GAMBLOCK_SMTP_USERNAME:-}")"
-  printf '  smtp_password: %s\n' "$(yaml_quote "${GAMBLOCK_SMTP_PASSWORD:-}")"
-  printf '  smtp_from: %s\n' "$(yaml_quote "${GAMBLOCK_SMTP_FROM:-}")"
-  echo '  whatsapp_api_key: ""'
-  echo '  whatsapp_phone_id: ""'
-  echo '  whatsapp_base_url: "https://graph.facebook.com/v18.0"'
+  printf '  fonnte_token: %s\n' "$(yaml_quote "${GAMBLOCK_FONNTE_TOKEN:-}")"
+  echo '  fonnte_base_url: "https://api.fonnte.com"'
+  echo '  fonnte_country_code: "62"'
   printf 'vault_cloudflare_api_token: %s\n' "$(yaml_quote "${GAMBLOCK_CLOUDFLARE_API_TOKEN:-}")"
 } > "$TEMP_FILE"
 
@@ -62,4 +57,4 @@ ansible-vault encrypt \
   --output "$VAULT_FILE" "$TEMP_FILE"
 chmod 600 "$VAULT_FILE"
 echo "Encrypted vault initialized: group_vars/all/vault.yml"
-echo "Use 'make vault-edit' to add GHCR, SMTP, and Cloudflare credentials."
+echo "Use 'make vault-edit' to add GHCR, Fonnte, and Cloudflare credentials."

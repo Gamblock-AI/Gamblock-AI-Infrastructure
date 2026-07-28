@@ -3,7 +3,7 @@
 Ansible deployment for the Gamblock-AI backend, website, PostgreSQL, and Caddy
 on one Ubuntu VPS.
 
-AI workflow context version: `2026-07-27.2`. Start with [`AGENTS.md`](AGENTS.md)
+AI workflow context version: `2026-07-29.1`. Start with [`AGENTS.md`](AGENTS.md)
 and [`docs/ai/README.md`](docs/ai/README.md).
 
 ## Production shape
@@ -68,9 +68,9 @@ all of these are configured in the encrypted vault:
 - a GitHub PAT with `read:packages` for private GHCR pulls;
 - valid PostgreSQL, JWT, and 64-character journal encryption values.
 
-SMTP and WhatsApp are optional delivery adapters. Without them, the stack still
-deploys in production mode but email verification/reset/export notifications
-and WhatsApp delivery remain unavailable; demo codes stay disabled. The
+Fonnte is the production transactional notification adapter. Without a
+`FONNTE_TOKEN`, production validation fails and WhatsApp verification/reset/export
+notifications remain unavailable; demo codes stay disabled. The
 Cloudflare helper separately requires a token
 with Zone Read, DNS Edit, and Zone Settings Edit for `gamblock-ai.com`.
 
