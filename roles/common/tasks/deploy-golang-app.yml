@@ -22,7 +22,7 @@
 
 - name: "Copy update.sh to application directory"
   ansible.builtin.copy:
-    src: "{{ role_path }}/files/update.sh"
+    src: "{{ role_path | dirname | dirname }}/common/files/update.sh"
     dest: "{{ app_install_dir }}/update.sh"
     mode: "0755"
     owner: root
