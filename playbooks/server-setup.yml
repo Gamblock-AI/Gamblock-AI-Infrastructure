@@ -21,9 +21,12 @@
           - vault_postgres_password | length >= 16
           - vault_gamblock_backend.jwt_access_secret | length >= 64
           - vault_gamblock_backend.journal_encryption_key | length == 64
+          - vault_gamblock_backend.fonnte_token | default('') | length > 0
+          - vault_gamblock_backend.fonnte_base_url | default('') is match('^https://')
+          - vault_gamblock_backend.fonnte_country_code | default('') | length > 0
         fail_msg: >-
           Production core secrets are incomplete. Configure the GHCR pull PAT
-          and database/JWT/AES values before an application deployment.
+          and database/JWT/AES/Fonnte values before an application deployment.
       delegate_to: localhost
       no_log: true
       when: not (skip_application_preflight | default(false) | bool)

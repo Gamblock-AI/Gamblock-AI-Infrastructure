@@ -77,6 +77,7 @@ for repo in "${DEPLOY_REPOS[@]}"; do
 done
 
 set_variable "Gamblock-AI-Website" "NEXT_PUBLIC_API_URL" "https://$(get_var api_domain)"
+set_variable "Gamblock-AI-Website" "NEXT_PUBLIC_APP_URL" "https://$(get_var primary_domain)"
 set_variable "Gamblock-AI-Website" "NEXT_PUBLIC_GOOGLE_CLIENT_ID" "$(get_var google_web_client_id)"
 
 echo -e "${BLUE}-- $OWNER/$FLUTTER_REPO --${NC}"
