@@ -1,6 +1,6 @@
 # AI Context Index
 
-Context version: `2026-07-31.15`
+Context version: `2026-08-02.23`
 
 This repository is intentionally self-contained. A clone does not need a
 parent workspace to discover its product constraints, infrastructure workflow,
