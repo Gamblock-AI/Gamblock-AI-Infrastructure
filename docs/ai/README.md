@@ -1,6 +1,7 @@
 # AI Context Index
 
-Context version: `2026-08-02.24`
+
+Jika ada pertentangan dengan `pkm_proposal.md`, proposal PKM adalah sumber mutlak.
 
 This repository is intentionally self-contained. A clone does not need a
 parent workspace to discover its product constraints, infrastructure workflow,
