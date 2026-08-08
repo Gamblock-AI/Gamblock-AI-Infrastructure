@@ -33,9 +33,12 @@ gamblock_db_name: "gamblock"
 gamblock_db_username: "gamblock"
 postgres_backup_retention_days: 14
 
-# ---- Public OAuth client identifiers (not secrets) ----
-google_web_client_id: "1073107282498-ii94s89dupci6gbmj1rsmd2dhjpa2bjs.apps.googleusercontent.com"
-google_windows_client_id: "1073107282498-4gnqge1tg7q23pbhkghamtdqpecqhh66.apps.googleusercontent.com"
+# ---- Web Push (daily reminder) ----
+# Public VAPID key (the matching private key lives in the encrypted vault).
+# Baked into the website build as NEXT_PUBLIC_VAPID_PUBLIC_KEY and rendered in
+# the backend .env.j2 as VAPID_PUBLIC_KEY.
+vapid_public_key: "BJa71prmSZVxNWcWczYLgXi2PWnniFjc_Fv83CvLD3vnRT0f0fU_VgdBwJW7NFaXtXnorE_6KY0F28XWVYkMXyc"
+vapid_subject: "mailto:support@gamblock-ai.com"
 
 # ---- Role toggles ----
 enable_system: true

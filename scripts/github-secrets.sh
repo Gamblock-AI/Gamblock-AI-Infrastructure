@@ -78,14 +78,12 @@ done
 
 set_variable "Gamblock-AI-Website" "NEXT_PUBLIC_API_URL" "https://$(get_var api_domain)"
 set_variable "Gamblock-AI-Website" "NEXT_PUBLIC_APP_URL" "https://$(get_var primary_domain)"
-set_variable "Gamblock-AI-Website" "NEXT_PUBLIC_GOOGLE_CLIENT_ID" "$(get_var google_web_client_id)"
+set_variable "Gamblock-AI-Website" "NEXT_PUBLIC_VAPID_PUBLIC_KEY" "$(get_var vapid_public_key)"
 
 echo -e "${BLUE}-- $OWNER/$FLUTTER_REPO --${NC}"
 set_variable "$FLUTTER_REPO" "DEV_API_BASE_URL" "$(get_var flutter_development_api_url)"
 set_variable "$FLUTTER_REPO" "PROD_API_BASE_URL" "$(get_var flutter_production_api_url)"
 set_variable "$FLUTTER_REPO" "WEB_BASE_URL" "$(get_var flutter_web_base_url)"
-set_variable "$FLUTTER_REPO" "GOOGLE_WEB_CLIENT_ID" "$(get_var google_web_client_id)"
-set_variable "$FLUTTER_REPO" "GOOGLE_WINDOWS_CLIENT_ID" "$(get_var google_windows_client_id)"
 set_variable "$FLUTTER_REPO" "ENABLE_PRODUCTION_RELEASE" "$(get_var github_enable_production_release)"
 
 echo ""

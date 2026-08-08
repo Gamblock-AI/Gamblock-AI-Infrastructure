@@ -62,7 +62,7 @@ artifact/export/media/avatar storage, and provides the production values
 required by backend fail-closed core configuration validation. A missing
 private-GHCR pull token remains a pre-deployment gate; SMTP and WhatsApp are
 optional delivery adapters and missing values disable only their workflows.
-Public Next.js variables, including Google OAuth's public client ID, are
+Public Next.js variables are
 build-time image inputs and are not secret runtime Ansible substitutions.
 
 The complete `make deploy` path reconciles Cloudflare DNS before Caddy

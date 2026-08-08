@@ -3,7 +3,7 @@
 Ansible deployment for the Gamblock-AI backend, website, PostgreSQL, and Caddy
 on one Ubuntu VPS.
 
-AI workflow context version: `2026-08-02.24`. Start with [`AGENTS.md`](AGENTS.md)
+AI workflow context version: `2026-08-09.2`. Start with [`AGENTS.md`](AGENTS.md)
 and [`docs/ai/README.md`](docs/ai/README.md).
 
 ## Production shape
@@ -94,13 +94,16 @@ health endpoint both answer successfully. `app` selects the requested role;
 the backend role also performs backup, migration, and safe seeding.
 
 The backend template disables development login/demo data, uses one PostgreSQL
-password consistently, includes web and Windows Google audiences, keeps
-delivery providers optional, and mounts artifact, export, education-media, and
-avatar storage. Its `tools` profile exposes `migrate-up`, guarded
+password consistently, keeps delivery providers optional, and mounts artifact,
+export, education-media, and avatar storage. Its `tools` profile exposes
+`migrate-up`, guarded
 `migrate-down`, and `seeder`; automatic deployment calls only migrate-up and
 the production-safe seeder. Pre-deploy backups are retained for 14 days. The
-website's public API and Google client ID are Docker build-time GitHub
-variables; Ansible cannot retrofit them into an already-built Next.js image.
+website's public API, app URL, and VAPID public key are Docker build-time
+GitHub variables; Ansible cannot retrofit them into an already-built Next.js
+image. The backend template renders the matching `VAPID_PUBLIC_KEY`,
+`VAPID_PRIVATE_KEY` (from the encrypted vault), and `VAPID_SUBJECT` for the
+opt-in daily Web Push reminder.
 
 ## GitHub and Cloudflare helpers
 
@@ -112,7 +115,7 @@ make cloudflare
 ```
 
 GitHub configuration stores only `VPS_PASSWORD` as an Actions secret. Host,
-public URLs, OAuth client IDs, and enable/disable gates are Actions
+public URLs, and enable/disable gates are Actions
 variables. `ENABLE_VPS_DEPLOY` defaults to `false` until the first bootstrap is
 verified. Cloudflare dry-run is local-only and does not require or contact the
 API.
