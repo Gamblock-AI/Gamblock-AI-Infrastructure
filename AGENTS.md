@@ -5,6 +5,8 @@ This repository is self-contained and requires no external workspace context.
 `AGENTS.md` is the canonical instruction file; provider adapters and the
 context manifest are indexed in `docs/ai/README.md`.
 
+Context version: `2026-08-09.5`
+
 ## Product safety boundaries
 
 - Gamblock-AI performs all AI inference on-device. Infrastructure must never

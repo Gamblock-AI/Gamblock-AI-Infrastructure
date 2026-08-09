@@ -1,6 +1,6 @@
 ---
 schema_version: 1
-context_version: "2026-08-09.4"
+context_version: "2026-08-09.5"
 project: gamblock-ai-infrastructure
 scope: repository
 source_of_truth: AGENTS.md
@@ -17,6 +17,8 @@ required_files:
   - docs/ai/manifest.yaml
   - CLAUDE.md
   - GEMINI.md
+  - COPILOT.md
+  - .cursorrules
   - .github/copilot-instructions.md
   - .github/workflows/ci.yml
   - .cursor/rules/gamblock-ai.mdc
