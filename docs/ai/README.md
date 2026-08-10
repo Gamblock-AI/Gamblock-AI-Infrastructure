@@ -74,8 +74,9 @@ Cloudflare DNS before Caddy certificate issuance, snapshots PostgreSQL, runs
 the image's migrate-up and production-safe seeder one-shot services, starts the
 applications, and waits for both public HTTPS endpoints. Ansible and CI update
 backups older than 14 days are removed.
-Migrate-down exists as a guarded manual tool only and is never invoked by
-Ansible or deployment updates.
+Migrate-down, dynamic-storage reset, and the four-account demo seeder exist as
+separately guarded manual tools only and are never invoked by Ansible or
+deployment updates.
 
 Production-host evidence rechecked on 2026-08-11: the
 root/password/pinned-host-key connection passed on the configured VPS. UFW,

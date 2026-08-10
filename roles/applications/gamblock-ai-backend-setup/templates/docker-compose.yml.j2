@@ -36,10 +36,29 @@ services:
     networks:
       - {{ postgres_network }}
 
+  reset-storage:
+    image: {{ gamblock_ai_backend.image }}
+    profiles: ["tools"]
+    entrypoint: ["/app/reset-storage"]
+    env_file: .env
+    volumes:
+      - {{ gamblock_ai_backend.name }}_exports:/app/var/exports
+      - {{ gamblock_ai_backend.name }}_media:/app/var/media
+
   seeder:
     image: {{ gamblock_ai_backend.image }}
     profiles: ["tools"]
     entrypoint: ["/app/seeder"]
+    env_file: .env
+    volumes:
+      - {{ gamblock_ai_backend.name }}_media:/app/var/media
+    networks:
+      - {{ postgres_network }}
+
+  demo-seeder:
+    image: {{ gamblock_ai_backend.image }}
+    profiles: ["tools"]
+    entrypoint: ["/app/demo-seeder"]
     env_file: .env
     volumes:
       - {{ gamblock_ai_backend.name }}_media:/app/var/media

@@ -109,15 +109,33 @@ The backend template disables development login/demo data, uses one PostgreSQL
 password consistently, requires the production Fonnte adapter, explicitly
 wires the DeepSeek SPK gate, and mounts artifact, export, education-media, and
 avatar storage. Its `tools` profile exposes
-`migrate-up`, guarded
-`migrate-down`, and `seeder`; automatic deployment calls only migrate-up and
-the production-safe seeder. Pre-deploy and CI update backups are retained for
+`migrate-up`, guarded `migrate-down`, guarded `reset-storage`, `seeder`, and
+the owner-confirmed `demo-seeder`; automatic deployment calls only migrate-up
+and the production-safe seeder. The destructive/manual services require their
+exact confirmation environment variables and are never invoked by Ansible's
+normal deploy path. Pre-deploy and CI update backups are retained for
 14 days. The website's public API, app URL, and VAPID public key are Docker
 build-time
 GitHub variables; Ansible cannot retrofit them into an already-built Next.js
 image. The backend template renders the matching `VAPID_PUBLIC_KEY`,
 `VAPID_PRIVATE_KEY` (from the encrypted vault), and `VAPID_SUBJECT` for the
 opt-in daily Web Push reminder.
+
+An owner-approved fresh demo reset is performed only from the rendered backend
+application directory while the API is stopped:
+
+```sh
+docker compose stop gamblock-ai-backend
+docker compose --profile tools run --rm --no-deps -e CONFIRM_MIGRATE_DOWN=DROP_ALL_DATA migrate-down
+docker compose --profile tools run --rm --no-deps -e CONFIRM_RESET_STORAGE=DELETE_DYNAMIC_STORAGE reset-storage
+docker compose --profile tools run --rm --no-deps migrate-up
+docker compose --profile tools run --rm --no-deps -e CONFIRM_DEMO_SEED=CREATE_FOUR_DEMO_ACCOUNTS demo-seeder
+docker compose up -d --no-deps gamblock-ai-backend
+```
+
+Keep the API stopped if any one-shot service fails. The demo seeder accepts an
+empty database or the exact four known fixtures only; it rejects unrelated
+accounts and is never called by `make deploy` or `update.sh`.
 
 ## GitHub and Cloudflare helpers
 

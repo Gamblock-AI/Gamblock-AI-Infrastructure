@@ -80,6 +80,12 @@ provisions the host, snapshots PostgreSQL, runs backend migrate-up and the
 production-safe seeder, starts both applications and Caddy, then waits for the
 public website and API health endpoints. It never invokes migrate-down.
 
+The backend Compose `tools` profile also exposes owner-invoked
+`migrate-down`, `reset-storage`, and `demo-seeder` services. They require exact
+confirmation variables at invocation time and must never be added to
+`app_prepare_services` or `update.sh`; normal deploys remain non-destructive
+and demo-free.
+
 `make credential-check` opens the encrypted vault in memory and prints only
 field-level status; it still requires explicit vault-access authorization.
 `make credential-check-online` also contacts GHCR, Cloudflare, Fonnte, and
