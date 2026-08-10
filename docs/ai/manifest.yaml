@@ -1,6 +1,6 @@
 ---
 schema_version: 1
-context_version: "2026-08-09.5"
+context_version: "2026-08-10.0"
 project: gamblock-ai-infrastructure
 scope: repository
 source_of_truth: AGENTS.md
