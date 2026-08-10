@@ -120,7 +120,7 @@ def known_host_name(token: str) -> str:
     return token
 
 
-def trusted_fingerprint(host: str) -> tuple[str, int]:
+def trusted_fingerprints(host: str) -> tuple[set[str], int]:
     try:
         rows = [
             line
@@ -130,20 +130,22 @@ def trusted_fingerprint(host: str) -> tuple[str, int]:
     except OSError as exc:
         raise SafeCheckError("inventory/known_hosts is unreadable") from exc
     current = [row for row in rows if known_host_name(row.split()[0]) == host]
-    if len(current) != 1:
-        raise SafeCheckError("known_hosts must contain exactly one key for the inventory host")
+    if not current:
+        raise SafeCheckError("known_hosts must contain a key for the inventory host")
+    fingerprints: set[str] = set()
     try:
-        result = subprocess.run(
-            ["ssh-keygen", "-lf", "-", "-E", "sha256"],
-            input=current[0] + "\n",
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        fingerprint = result.stdout.split()[1]
+        for row in current:
+            result = subprocess.run(
+                ["ssh-keygen", "-lf", "-", "-E", "sha256"],
+                input=row + "\n",
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            fingerprints.add(result.stdout.split()[1])
     except (OSError, subprocess.CalledProcessError, IndexError) as exc:
         raise SafeCheckError("cannot derive the trusted inventory host fingerprint") from exc
-    return fingerprint, len(rows) - len(current)
+    return fingerprints, len(rows) - len(current)
 
 
 def validate_mode(path: Path, errors: list[str], *, required: bool) -> None:
@@ -263,10 +265,10 @@ def validate_offline(vault: dict[str, Any], variables: dict[str, Any]) -> list[s
 
     try:
         host = inventory_host()
-        fingerprint, stale_count = trusted_fingerprint(host)
+        fingerprints, stale_count = trusted_fingerprints(host)
         if stale_count:
             errors.append("inventory/known_hosts contains keys unrelated to the production host")
-        if variables.get("vps_host_fingerprint") != fingerprint:
+        if variables.get("vps_host_fingerprint") not in fingerprints:
             errors.append("vps_host_fingerprint does not match the committed production host key")
     except SafeCheckError as exc:
         errors.append(str(exc))

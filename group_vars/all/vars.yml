@@ -73,7 +73,8 @@ enable_caddy: true
 
 # ---- GitHub (org repos for CI secrets/variables) ----
 github_owner: "Gamblock-AI"
-vps_host_fingerprint: "SHA256:xp0HtCaVmNLg6MtBIpX1faQiWD/nusbcKpkU9NPofs4"
+# drone-ssh uses Go's host-key preference and negotiates this trusted ECDSA key.
+vps_host_fingerprint: "SHA256:x/P+AsSszaRkiln4N3Y4wTaLnJIvnAJBBPPuTQwaxd4"
 github_repos:
   - "Gamblock-AI-Backend"
   - "Gamblock-AI-Website"
