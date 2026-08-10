@@ -33,6 +33,29 @@ gamblock_db_name: "gamblock"
 gamblock_db_username: "gamblock"
 postgres_backup_retention_days: 14
 
+# ---- Backend media policy ----
+# Exact HTTPS hosts accepted by the backend education-media gate. The website
+# ships the matching public-origin fallback in its build.
+media_embed_allowed_hosts:
+  - "www.youtube-nocookie.com"
+  - "player.vimeo.com"
+  - "who.int"
+  - "www.who.int"
+  - "ppatk.go.id"
+  - "www.ppatk.go.id"
+  - "ojk.go.id"
+  - "www.ojk.go.id"
+  - "komdigi.go.id"
+  - "www.komdigi.go.id"
+  - "kemkes.go.id"
+  - "www.kemkes.go.id"
+
+# ---- DeepSeek-backed supporting features ----
+# The API key is stored under vault_gamblock_backend.deepseek_api_key.
+deepseek_base_url: "https://api.deepseek.com"
+deepseek_model: "deepseek-v4-flash"
+spk_llm_enrichment: true
+
 # ---- Web Push (daily reminder) ----
 # Public VAPID key (the matching private key lives in the encrypted vault).
 # Baked into the website build as NEXT_PUBLIC_VAPID_PUBLIC_KEY and rendered in
@@ -50,12 +73,13 @@ enable_caddy: true
 
 # ---- GitHub (org repos for CI secrets/variables) ----
 github_owner: "Gamblock-AI"
+vps_host_fingerprint: "SHA256:xp0HtCaVmNLg6MtBIpX1faQiWD/nusbcKpkU9NPofs4"
 github_repos:
   - "Gamblock-AI-Backend"
   - "Gamblock-AI-Website"
   - "Gamblock-AI-Apps"
 
-# Deploy remains disabled in CI until the first successful Ansible bootstrap.
+# Production bootstrap is complete; CI deploy remains explicitly enabled.
 github_enable_vps_deploy: "true"
 github_enable_production_release: "false"
 

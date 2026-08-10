@@ -5,7 +5,7 @@ This repository is self-contained and requires no external workspace context.
 `AGENTS.md` is the canonical instruction file; provider adapters and the
 context manifest are indexed in `docs/ai/README.md`.
 
-Context version: `2026-08-10.0`
+Context version: `2026-08-11.1`
 
 ## Product safety boundaries
 
@@ -74,10 +74,16 @@ process; normal playbook commands default to the encrypted
 `group_vars/all/vault.yml`. Never export the lint-mode variables for an
 operational command.
 
-`make deploy` is the complete production path: it reconciles Cloudflare DNS,
+`make deploy` is the complete production path: it first validates configured
+provider credentials through read-only endpoints, reconciles Cloudflare DNS,
 provisions the host, snapshots PostgreSQL, runs backend migrate-up and the
 production-safe seeder, starts both applications and Caddy, then waits for the
 public website and API health endpoints. It never invokes migrate-down.
+
+`make credential-check` opens the encrypted vault in memory and prints only
+field-level status; it still requires explicit vault-access authorization.
+`make credential-check-online` also contacts GHCR, Cloudflare, Fonnte, and
+DeepSeek through read-only endpoints and requires external-contact approval.
 
 `make check-mode` contacts the configured host but asks Ansible to simulate the
 playbook with `--check`; confirm the intended inventory and permission to make
@@ -101,7 +107,7 @@ State what they access before running them and honor the user's authorization.
 ## Secrets and configuration
 
 - `.vault_pass` and `.env` are local, gitignored files. Never print or commit
-  their contents.
+  their contents, and keep them mode `0600`.
 - The production inventory uses only `root`, password authentication, SSH port
   22, and the pinned host key. Do not add deploy users, authentication keys, or
   a custom port unless the owner changes this operational decision.
@@ -112,6 +118,10 @@ State what they access before running them and honor the user's authorization.
   and secrets in the encrypted vault.
 - Keep SSH host identity in `inventory/known_hosts`; never replace the pinned
   key from an unverified network observation or commit a workstation path.
+- Keep the matching `VPS_HOST_FINGERPRINT` Actions variable on both deploy
+  repositories; CI SSH must fail closed when the host identity changes.
+- Keep Fonnte, VAPID, and conditional DeepSeek gates aligned across the vault,
+  backend environment template, and redacted credential validator.
 
 ## Change rules
 
@@ -135,7 +145,9 @@ Before handing off a change:
 1. Run `scripts/verify-ai-context.sh --allow-untracked` while new context files
    are not committed. CI runs the stricter form without the flag.
 2. Run `make lint`.
-3. Do not run `make check`, `make check-mode`, tests, builds, or deployment
+3. When vault/provider access was explicitly authorized, run the narrow
+   `make credential-check` and optionally `make credential-check-online` gates.
+4. Do not run `make check`, `make check-mode`, tests, builds, or deployment
    verification unless the user explicitly requests them. `make check-mode`
    additionally requires external-contact approval.
 

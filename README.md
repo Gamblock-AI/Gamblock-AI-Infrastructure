@@ -3,7 +3,7 @@
 Ansible deployment for the Gamblock-AI backend, website, PostgreSQL, and Caddy
 on one Ubuntu VPS.
 
-AI workflow context version: `2026-08-10.0`. Start with [`AGENTS.md`](AGENTS.md)
+AI workflow context version: `2026-08-11.1`. Start with [`AGENTS.md`](AGENTS.md)
 and [`docs/ai/README.md`](docs/ai/README.md).
 
 ## Production shape
@@ -34,7 +34,8 @@ roles/infrastructure/{docker-setup,caddy-setup}/
 roles/databases/postgres-setup/
 roles/applications/
 roles/common/files/update.sh
-scripts/{init-vault,github-secrets,cloudflare-dns,verify-production}.sh
+scripts/{init-vault,update-vault-integrations,github-secrets,cloudflare-dns,verify-production}.sh
+scripts/verify-credentials.py
 ```
 
 ## Local setup and validation
@@ -43,6 +44,7 @@ scripts/{init-vault,github-secrets,cloudflare-dns,verify-production}.sh
 python -m pip install -r requirements.txt
 ansible-galaxy collection install -r requirements.yml
 cp .vault_pass.example .vault_pass
+chmod 600 .vault_pass
 make lint
 scripts/verify-ai-context.sh --allow-untracked
 ```
@@ -50,10 +52,16 @@ scripts/verify-ai-context.sh --allow-untracked
 `.vault_pass` is ignored and must contain the password for the tracked encrypted
 `group_vars/all/vault.yml`. For a deliberately new environment, `make
 vault-init` prompts for the current VPS root password, generates independent
-PostgreSQL/JWT/AES values, and encrypts the result immediately. Add remaining
-credentials with `make vault-edit`, or update only the GHCR and Cloudflare
-tokens without opening an editor using `make vault-integrations`. Never keep a
-plaintext vault.
+PostgreSQL/JWT/AES values, and encrypts the result immediately. It refuses to
+overwrite an existing vault. Add remaining credentials with `make vault-edit`,
+or update GHCR, Cloudflare, Fonnte, and DeepSeek tokens without opening an
+editor using `make vault-integrations`; blank interactive input preserves the
+current value. Never keep a plaintext vault.
+
+`make credential-check` decrypts the vault only in memory and reports field
+status without values. `make credential-check-online` additionally makes
+read-only calls to GHCR, Cloudflare, Fonnte, and DeepSeek. The complete
+`make deploy` path runs that online gate before any DNS or server mutation.
 
 `make lint` uses only `vault.yml.example`. `make check` is local syntax
 validation. `make ping`, `make check-mode`, `make bootstrap`, deployment,
@@ -66,7 +74,11 @@ Normal application deployment intentionally stops before remote changes until
 all of these are configured in the encrypted vault:
 
 - a GitHub PAT with `read:packages` for private GHCR pulls;
-- valid PostgreSQL, JWT, and 64-character journal encryption values.
+- valid PostgreSQL, JWT, and AES-256 journal encryption values;
+- a connected Fonnte device token;
+- a VAPID private key matching the configured public key; and
+- a DeepSeek API key that can access the configured model whenever
+  `spk_llm_enrichment` is enabled.
 
 Fonnte is the production transactional notification adapter. Without a
 `FONNTE_TOKEN`, production validation fails and WhatsApp verification/reset/export
@@ -94,12 +106,14 @@ health endpoint both answer successfully. `app` selects the requested role;
 the backend role also performs backup, migration, and safe seeding.
 
 The backend template disables development login/demo data, uses one PostgreSQL
-password consistently, keeps delivery providers optional, and mounts artifact,
-export, education-media, and avatar storage. Its `tools` profile exposes
+password consistently, requires the production Fonnte adapter, explicitly
+wires the DeepSeek SPK gate, and mounts artifact, export, education-media, and
+avatar storage. Its `tools` profile exposes
 `migrate-up`, guarded
 `migrate-down`, and `seeder`; automatic deployment calls only migrate-up and
-the production-safe seeder. Pre-deploy backups are retained for 14 days. The
-website's public API, app URL, and VAPID public key are Docker build-time
+the production-safe seeder. Pre-deploy and CI update backups are retained for
+14 days. The website's public API, app URL, and VAPID public key are Docker
+build-time
 GitHub variables; Ansible cannot retrofit them into an already-built Next.js
 image. The backend template renders the matching `VAPID_PUBLIC_KEY`,
 `VAPID_PRIVATE_KEY` (from the encrypted vault), and `VAPID_SUBJECT` for the
@@ -115,10 +129,10 @@ make cloudflare
 ```
 
 GitHub configuration stores only `VPS_PASSWORD` as an Actions secret. Host,
-public URLs, and enable/disable gates are Actions
-variables. `ENABLE_VPS_DEPLOY` defaults to `false` until the first bootstrap is
-verified. Cloudflare dry-run is local-only and does not require or contact the
-API.
+pinned SSH fingerprint, public URLs, and enable/disable gates are Actions
+variables. The current bootstrapped production environment deliberately keeps
+`ENABLE_VPS_DEPLOY=true`. Cloudflare dry-run is local-only and does not require
+or contact the API.
 
 All classification remains on-device. This stack must never receive or log raw
 DOM, URLs, domains, screenshots, or browsing history.

@@ -1,4 +1,5 @@
-.PHONY: help ping check check-mode lint verify-context bootstrap deploy app \
+.PHONY: help ping check check-mode lint verify-context credential-check \
+        credential-check-online bootstrap deploy app \
         vault-init vault-integrations vault-encrypt vault-decrypt vault-view vault-edit \
         github-secrets github-secrets-dry cloudflare cloudflare-dry \
         ci-init ssh
@@ -33,7 +34,14 @@ lint: ## Lint playbooks and roles
 verify-context: ## Verify committed AI context files and portability
 	@./scripts/verify-ai-context.sh
 
+credential-check: ## Validate the encrypted production credential contract locally
+	@python3 scripts/verify-credentials.py
+
+credential-check-online: ## Validate credentials against read-only provider endpoints
+	@python3 scripts/verify-credentials.py --online
+
 deploy: check ## Prepare DNS/database, deploy the full stack, and verify production
+	@python3 scripts/verify-credentials.py --online
 	@./scripts/cloudflare-dns.sh
 	@ansible-playbook $(OPTS) $(PLAYBOOK)
 	@./scripts/verify-production.sh
@@ -62,7 +70,7 @@ ssh: ## SSH into the server
 vault-init: ## Generate a new encrypted production vault
 	@./scripts/init-vault.sh
 
-vault-integrations: ## Securely update GHCR and Cloudflare tokens in the vault
+vault-integrations: ## Securely update selected provider tokens in the vault
 	@./scripts/update-vault-integrations.sh
 
 vault-encrypt: ## Encrypt the secret file ($(VAULT_FILE))

@@ -7,6 +7,14 @@ COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 COMPOSE_PROJECT_NAME=$(basename "$PWD")
 LOG_FILE="/var/log/docker-updates/${COMPOSE_PROJECT_NAME}.log"
 POSTGRES_CONTAINER_NAME="${POSTGRES_CONTAINER_NAME:-postgres-db}"
+POSTGRES_BACKUP_RETENTION_DAYS="${POSTGRES_BACKUP_RETENTION_DAYS:-14}"
+
+case "$POSTGRES_BACKUP_RETENTION_DAYS" in
+  ""|*[!0-9]*)
+    echo "POSTGRES_BACKUP_RETENTION_DAYS must be a non-negative integer" >&2
+    exit 1
+    ;;
+esac
 
 mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || true
 
@@ -39,6 +47,11 @@ if docker compose -f "$COMPOSE_FILE" config --services | grep -qx 'migrate-up'; 
   docker exec "$POSTGRES_CONTAINER_NAME" sh -c \
     'pg_dump --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --format=custom --file="/backups/pre-update-$(date +%Y%m%dT%H%M%S).dump"' \
     || error_exit "database backup failed"
+
+  log "Pruning pre-update backups older than ${POSTGRES_BACKUP_RETENTION_DAYS} days"
+  docker exec "$POSTGRES_CONTAINER_NAME" find /backups -maxdepth 1 -type f \
+    -name 'pre-update-*.dump' -mtime "+${POSTGRES_BACKUP_RETENTION_DAYS}" -delete \
+    || error_exit "database backup retention cleanup failed"
 
   log "Applying database migrations"
   docker compose -f "$COMPOSE_FILE" --profile tools run --rm --no-deps migrate-up \

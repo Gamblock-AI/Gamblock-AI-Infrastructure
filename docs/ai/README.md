@@ -3,7 +3,7 @@
 
 Jika ada pertentangan dengan `pkm_proposal.md`, proposal PKM adalah sumber mutlak.
 
-Context version: `2026-08-10.0`
+Context version: `2026-08-11.1`
 
 This repository is intentionally self-contained. A clone does not need a
 parent workspace to discover its product constraints, infrastructure workflow,
@@ -58,29 +58,32 @@ check; syntax/check-mode/deployment checks run only on explicit request, and
 external contact still requires authorization.
 
 The production topology is one root/password/port-22 VPS with a pinned SSH
-host key, Docker, PostgreSQL, and Caddy-managed TLS. The backend deployment
-template keeps `ENABLE_DEV_LOGIN=false` and `ENABLE_DEMO_DATA=false`, mounts
+host key, Docker, PostgreSQL, and Caddy-managed TLS. Both GitHub deploy
+workflows receive the trusted fingerprint as an Actions variable and fail
+closed on a different host identity. The backend deployment template keeps
+`ENABLE_DEV_LOGIN=false` and `ENABLE_DEMO_DATA=false`, mounts
 artifact/export/media/avatar storage, and provides the production values
-required by backend fail-closed core configuration validation. A missing
-private-GHCR pull token remains a pre-deployment gate; SMTP and WhatsApp are
-optional delivery adapters and missing values disable only their workflows.
-Public Next.js variables are
+required by backend fail-closed configuration validation. Private-GHCR,
+Fonnte, VAPID, and—while the SPK LLM gate is enabled—DeepSeek credentials are
+pre-deployment gates. Public Next.js variables are
 build-time image inputs and are not secret runtime Ansible substitutions.
 
-The complete `make deploy` path reconciles Cloudflare DNS before Caddy
-certificate issuance, snapshots PostgreSQL, runs the image's migrate-up and
-production-safe seeder one-shot services, starts the applications, and waits
-for both public HTTPS endpoints. Backups older than 14 days are removed.
+The complete `make deploy` path first validates GHCR, Cloudflare, Fonnte, and
+DeepSeek credentials through read-only provider endpoints, then reconciles
+Cloudflare DNS before Caddy certificate issuance, snapshots PostgreSQL, runs
+the image's migrate-up and production-safe seeder one-shot services, starts the
+applications, and waits for both public HTTPS endpoints. Ansible and CI update
+backups older than 14 days are removed.
 Migrate-down exists as a guarded manual tool only and is never invoked by
 Ansible or deployment updates.
 
-Production-host evidence on 2026-07-20: the root/password/pinned-host-key
-connection passed and the idempotent bootstrap completed on the configured
-VPS. UFW, fail2ban, unattended upgrades, a 2 GiB swapfile, Docker, healthy
-PostgreSQL 16, and healthy Caddy 2.11.4 are active. The current website image
+Production-host evidence rechecked on 2026-08-11: the
+root/password/pinned-host-key connection passed on the configured VPS. UFW,
+fail2ban, unattended upgrades, a 2 GiB swapfile, Docker, healthy PostgreSQL 16,
+and healthy Caddy 2.11.4 are active. The current website image
 starts Next.js successfully, but its Compose health probe must use
 `127.0.0.1` rather than `localhost`: the container resolves `localhost` to
 IPv6 first while Next.js listens on IPv4. The image and Compose templates now
 use the explicit IPv4 loopback address. DNS reconciliation and public health
-verification are part of the authorized `make deploy` operation. SMTP and
-WhatsApp are not deployment blockers.
+verification are part of the authorized `make deploy` operation. SMTP remains
+optional; the production Fonnte adapter is required.

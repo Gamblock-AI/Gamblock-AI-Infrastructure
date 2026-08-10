@@ -32,10 +32,15 @@ check_requirements || exit 1
 
 OWNER=$(get_var "github_owner")
 VPS_IP=$(get_vps_ip)
+VPS_FINGERPRINT=$(get_var "vps_host_fingerprint")
 DEPLOY_REPOS=("Gamblock-AI-Backend" "Gamblock-AI-Website")
 FLUTTER_REPO="Gamblock-AI-Apps"
 VPS_PASSWORD=$(get_vault_var "vault_vps_password")
 [ -n "$VPS_PASSWORD" ] || { echo -e "${RED}vault_vps_password is empty${NC}"; exit 1; }
+case "$VPS_FINGERPRINT" in
+  SHA256:*) ;;
+  *) echo -e "${RED}vps_host_fingerprint is invalid${NC}"; exit 1 ;;
+esac
 
 echo -e "${GREEN}Owner:${NC} $OWNER"
 echo -e "${GREEN}VPS IP:${NC} $VPS_IP"
@@ -73,6 +78,7 @@ for repo in "${DEPLOY_REPOS[@]}"; do
   echo -e "${BLUE}-- $OWNER/$repo --${NC}"
   set_secret "$repo" "VPS_PASSWORD" "$VPS_PASSWORD"
   set_variable "$repo" "VPS_HOST" "$VPS_IP"
+  set_variable "$repo" "VPS_HOST_FINGERPRINT" "$VPS_FINGERPRINT"
   set_variable "$repo" "ENABLE_VPS_DEPLOY" "$(get_var github_enable_vps_deploy)"
 done
 

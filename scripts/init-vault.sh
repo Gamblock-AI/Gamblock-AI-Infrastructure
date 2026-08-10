@@ -1,6 +1,6 @@
 #!/bin/bash
-# Generate strong application secrets and immediately encrypt the complete
-# production vault. Missing third-party credentials remain empty deploy gates.
+# Generate strong application secrets and immediately encrypt a deliberately
+# new production vault. Existing operational vaults are never overwritten.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,6 +11,12 @@ VAULT_PASSWORD_FILE="$PROJECT_DIR/.vault_pass"
 command -v ansible-vault >/dev/null 2>&1 || { echo "ansible-vault is required"; exit 1; }
 command -v openssl >/dev/null 2>&1 || { echo "openssl is required"; exit 1; }
 [ -s "$VAULT_PASSWORD_FILE" ] || { echo ".vault_pass must exist and be non-empty"; exit 1; }
+
+if [ -e "$VAULT_FILE" ]; then
+  echo "Refusing to overwrite existing group_vars/all/vault.yml"
+  echo "Use make vault-integrations or make vault-edit to update it in place."
+  exit 1
+fi
 
 if [ -z "${GAMBLOCK_VPS_PASSWORD:-}" ]; then
   read -rsp "Current VPS root password: " GAMBLOCK_VPS_PASSWORD
@@ -48,6 +54,8 @@ chmod 600 "$TEMP_FILE"
   printf '  fonnte_token: %s\n' "$(yaml_quote "${GAMBLOCK_FONNTE_TOKEN:-}")"
   echo '  fonnte_base_url: "https://api.fonnte.com"'
   echo '  fonnte_country_code: "62"'
+  printf '  deepseek_api_key: %s\n' "$(yaml_quote "${GAMBLOCK_DEEPSEEK_API_KEY:-}")"
+  printf 'vault_vapid_private_key: %s\n' "$(yaml_quote "${GAMBLOCK_VAPID_PRIVATE_KEY:-}")"
   printf 'vault_cloudflare_api_token: %s\n' "$(yaml_quote "${GAMBLOCK_CLOUDFLARE_API_TOKEN:-}")"
 } > "$TEMP_FILE"
 
@@ -57,4 +65,4 @@ ansible-vault encrypt \
   --output "$VAULT_FILE" "$TEMP_FILE"
 chmod 600 "$VAULT_FILE"
 echo "Encrypted vault initialized: group_vars/all/vault.yml"
-echo "Use 'make vault-edit' to add GHCR, Fonnte, and Cloudflare credentials."
+echo "Use 'make vault-integrations' or 'make vault-edit' to finish provider credentials."

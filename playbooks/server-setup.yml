@@ -17,16 +17,25 @@
       ansible.builtin.assert:
         that:
           - vault_vps_password | length >= 12
-          - vault_github_registry_pat | length > 0
+          - vault_github_registry_pat is match('^(ghp_|github_pat_).+')
           - vault_postgres_password | length >= 16
+          - vault_postgres_password is match('^[A-Za-z0-9._~-]+$')
           - vault_gamblock_backend.jwt_access_secret | length >= 64
-          - vault_gamblock_backend.journal_encryption_key | length == 64
+          - vault_gamblock_backend.journal_encryption_key is match('^[A-Fa-f0-9]{64}$')
           - vault_gamblock_backend.fonnte_token | default('') | length > 0
           - vault_gamblock_backend.fonnte_base_url | default('') is match('^https://')
-          - vault_gamblock_backend.fonnte_country_code | default('') | length > 0
+          - vault_gamblock_backend.fonnte_country_code | default('') is match('^[0-9]{1,3}$')
+          - not (spk_llm_enrichment | bool) or (vault_gamblock_backend.deepseek_api_key | default('') | length > 0)
+          - deepseek_base_url is match('^https://')
+          - deepseek_model | length > 0
+          - vapid_public_key is match('^[A-Za-z0-9_-]{87}$')
+          - vault_vapid_private_key | default('') is match('^[A-Za-z0-9_-]{43}$')
+          - vapid_subject is match('^(mailto:|https://)')
+          - media_embed_allowed_hosts | length > 0
         fail_msg: >-
           Production core secrets are incomplete. Configure the GHCR pull PAT
-          and database/JWT/AES/Fonnte values before an application deployment.
+          and database/JWT/AES/Fonnte/VAPID values plus DeepSeek whenever SPK
+          LLM enrichment is enabled before an application deployment.
       delegate_to: localhost
       no_log: true
       when: not (skip_application_preflight | default(false) | bool)

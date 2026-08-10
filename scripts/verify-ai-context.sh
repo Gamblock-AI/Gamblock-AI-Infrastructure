@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-EXPECTED_CONTEXT_VERSION="2026-08-10.0"
+EXPECTED_CONTEXT_VERSION="2026-08-11.1"
 ALLOW_UNTRACKED=false
 ERRORS=0
 
@@ -60,6 +60,7 @@ required_files=(
   ".github/workflows/ci.yml"
   ".cursor/rules/gamblock-ai.mdc"
   "ansible-lint.cfg"
+  "scripts/verify-credentials.py"
   "scripts/verify-ai-context.sh"
 )
 
@@ -81,6 +82,9 @@ done
 
 if [[ ! -x "scripts/verify-ai-context.sh" ]]; then
   fail "scripts/verify-ai-context.sh must be executable"
+fi
+if [[ ! -x "scripts/verify-credentials.py" ]]; then
+  fail "scripts/verify-credentials.py must be executable"
 fi
 
 if ! grep -Fxq "context_version: \"$EXPECTED_CONTEXT_VERSION\"" \

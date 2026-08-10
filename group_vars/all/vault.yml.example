@@ -19,6 +19,11 @@ vault_gamblock_backend:
   fonnte_token: ""
   fonnte_base_url: "https://api.fonnte.com"
   fonnte_country_code: "62"
+  deepseek_api_key: ""
+
+# ---- Web Push private key ----
+# Must be the P-256 private key matching group_vars/all/vars.yml:vapid_public_key.
+vault_vapid_private_key: ""
 
 # ---- Cloudflare API ----
 vault_cloudflare_api_token: ""
