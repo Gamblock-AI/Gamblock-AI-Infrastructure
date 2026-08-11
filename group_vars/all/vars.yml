@@ -56,6 +56,13 @@ deepseek_base_url: "https://api.deepseek.com"
 deepseek_model: "deepseek-v4-flash"
 spk_llm_enrichment: true
 
+# ---- Device-bound protection grants ----
+# The matching private key is stored in the encrypted vault. This public trust
+# store is base64(JSON {kid: base64-DER-SPKI-P256}) and is compiled into the
+# Android/Windows native verifiers; it never contains a secret.
+protection_grant_signing_key_id: "grant-2026-01"
+protection_grant_trust_store_base64: "eyJncmFudC0yMDI2LTAxIjoiTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFNTR6MnljeCtNeVFjUXBkNW1jb3d3QUM4ejlJQjNWbGtPNExUUkVCTnhxck5lS1Q3bkY1UVQ3YW5uaml1dCtRRDhuSkNrS0NKamdydUlCbkNpbkF4TWc9PSJ9"
+
 # ---- Web Push (daily reminder) ----
 # Public VAPID key (the matching private key lives in the encrypted vault).
 # Baked into the website build as NEXT_PUBLIC_VAPID_PUBLIC_KEY and rendered in
@@ -82,7 +89,8 @@ github_repos:
 
 # Production bootstrap is complete; CI deploy remains explicitly enabled.
 github_enable_vps_deploy: "true"
-github_enable_production_release: "false"
+github_enable_production_release: "true"
+github_enable_windows_pilot_release: "false"
 
 # ---- Flutter public environment configuration ----
 flutter_development_api_url: "https://thankful-midge-noble.ngrok-free.app"

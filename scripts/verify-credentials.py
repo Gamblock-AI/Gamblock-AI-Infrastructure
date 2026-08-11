@@ -20,7 +20,12 @@ from typing import Any
 
 import yaml
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from cryptography.hazmat.primitives.serialization import (
+    Encoding,
+    PublicFormat,
+    load_der_private_key,
+    load_der_public_key,
+)
 
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
@@ -178,6 +183,7 @@ def validate_offline(vault: dict[str, Any], variables: dict[str, Any]) -> list[s
         "vault_postgres_password",
         "vault_gamblock_backend.jwt_access_secret",
         "vault_gamblock_backend.journal_encryption_key",
+        "vault_gamblock_backend.protection_grant_signing_private_key",
         "vault_gamblock_backend.fonnte_token",
         "vault_gamblock_backend.fonnte_base_url",
         "vault_gamblock_backend.fonnte_country_code",
@@ -212,6 +218,50 @@ def validate_offline(vault: dict[str, Any], variables: dict[str, Any]) -> list[s
     journal_key = clean_string(nested(vault, "vault_gamblock_backend.journal_encryption_key"))
     if journal_key and not re.fullmatch(r"[A-Fa-f0-9]{64}", journal_key):
         errors.append("vault_gamblock_backend.journal_encryption_key must be 64 hexadecimal characters")
+
+    grant_key_id = clean_string(variables.get("protection_grant_signing_key_id")).strip()
+    grant_private = clean_string(
+        nested(vault, "vault_gamblock_backend.protection_grant_signing_private_key")
+    ).strip()
+    trust_store_encoded = clean_string(
+        variables.get("protection_grant_trust_store_base64")
+    ).strip()
+    if not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", grant_key_id):
+        errors.append("protection_grant_signing_key_id is invalid")
+    try:
+        private_der = base64.b64decode(grant_private, validate=True)
+        private_key = load_der_private_key(private_der, password=None)
+        if not isinstance(private_key, ec.EllipticCurvePrivateKey) or not isinstance(
+            private_key.curve, ec.SECP256R1
+        ):
+            raise ValueError
+        trust_store_raw = base64.b64decode(trust_store_encoded, validate=True)
+        trust_store = json.loads(trust_store_raw.decode("utf-8"))
+        if not isinstance(trust_store, dict) or not trust_store:
+            raise ValueError
+        for kid, public_der_encoded in trust_store.items():
+            if not isinstance(kid, str) or not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", kid):
+                raise ValueError
+            if not isinstance(public_der_encoded, str):
+                raise ValueError
+            public_key = load_der_public_key(
+                base64.b64decode(public_der_encoded, validate=True)
+            )
+            if not isinstance(public_key, ec.EllipticCurvePublicKey) or not isinstance(
+                public_key.curve, ec.SECP256R1
+            ):
+                raise ValueError
+        expected_public = base64.b64encode(
+            private_key.public_key().public_bytes(
+                Encoding.DER, PublicFormat.SubjectPublicKeyInfo
+            )
+        ).decode("ascii")
+        if trust_store.get(grant_key_id) != expected_public:
+            errors.append(
+                "the active protection-grant private key does not match its client trust-store entry"
+            )
+    except (binascii.Error, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
+        errors.append("the protection-grant key or public trust store is invalid")
 
     fonnte_url = clean_string(nested(vault, "vault_gamblock_backend.fonnte_base_url"))
     if fonnte_url.rstrip("/") != "https://api.fonnte.com":

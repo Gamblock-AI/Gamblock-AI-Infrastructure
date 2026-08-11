@@ -16,6 +16,7 @@ vault_postgres_password: "change-this-strong-postgres-password"
 vault_gamblock_backend:
   jwt_access_secret: "generate-with-openssl-rand-hex-32"
   journal_encryption_key: "generate-with-openssl-rand-hex-32"
+  protection_grant_signing_private_key: "base64-pkcs8-der-p256-private-key"
   fonnte_token: ""
   fonnte_base_url: "https://api.fonnte.com"
   fonnte_country_code: "62"

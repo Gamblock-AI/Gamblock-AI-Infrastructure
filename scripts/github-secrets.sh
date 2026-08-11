@@ -91,6 +91,8 @@ set_variable "$FLUTTER_REPO" "DEV_API_BASE_URL" "$(get_var flutter_development_a
 set_variable "$FLUTTER_REPO" "PROD_API_BASE_URL" "$(get_var flutter_production_api_url)"
 set_variable "$FLUTTER_REPO" "WEB_BASE_URL" "$(get_var flutter_web_base_url)"
 set_variable "$FLUTTER_REPO" "ENABLE_PRODUCTION_RELEASE" "$(get_var github_enable_production_release)"
+set_variable "$FLUTTER_REPO" "ENABLE_WINDOWS_PILOT_RELEASE" "$(get_var github_enable_windows_pilot_release)"
+set_variable "$FLUTTER_REPO" "PROTECTION_GRANT_TRUST_STORE_BASE64" "$(get_var protection_grant_trust_store_base64)"
 
 echo ""
 echo -e "${GREEN}Done.${NC}"

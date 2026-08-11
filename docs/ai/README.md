@@ -3,7 +3,7 @@
 
 Jika ada pertentangan dengan `pkm_proposal.md`, proposal PKM adalah sumber mutlak.
 
-Context version: `2026-08-11.1`
+Context version: `2026-08-12.2`
 
 This repository is intentionally self-contained. A clone does not need a
 parent workspace to discover its product constraints, infrastructure workflow,
@@ -64,8 +64,10 @@ closed on a different host identity. The backend deployment template keeps
 `ENABLE_DEV_LOGIN=false` and `ENABLE_DEMO_DATA=false`, mounts
 artifact/export/media/avatar storage, and provides the production values
 required by backend fail-closed configuration validation. Private-GHCR,
-Fonnte, VAPID, and—while the SPK LLM gate is enabled—DeepSeek credentials are
-pre-deployment gates. Public Next.js variables are
+Fonnte, VAPID, the device-bound protection-grant P-256 keypair, and—while the
+SPK LLM gate is enabled—DeepSeek credentials are pre-deployment gates. The
+credential validator matches the active backend private key to the public
+Android/Windows trust-store entry without printing either value. Public Next.js variables are
 build-time image inputs and are not secret runtime Ansible substitutions.
 
 The complete `make deploy` path first validates GHCR, Cloudflare, Fonnte, and

@@ -5,7 +5,7 @@ This repository is self-contained and requires no external workspace context.
 `AGENTS.md` is the canonical instruction file; provider adapters and the
 context manifest are indexed in `docs/ai/README.md`.
 
-Context version: `2026-08-11.1`
+Context version: `2026-08-12.2`
 
 ## Product safety boundaries
 
@@ -128,6 +128,9 @@ State what they access before running them and honor the user's authorization.
   repositories; CI SSH must fail closed when the host identity changes.
 - Keep Fonnte, VAPID, and conditional DeepSeek gates aligned across the vault,
   backend environment template, and redacted credential validator.
+- Keep the protection-grant ES256 private key only in the encrypted backend
+  vault. Its non-secret `kid` and public trust store must match the Android and
+  Windows release variables; never reuse JWT, VAPID, APK, or Authenticode keys.
 
 ## Change rules
 

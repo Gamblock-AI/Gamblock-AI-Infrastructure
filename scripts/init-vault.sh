@@ -43,6 +43,16 @@ cleanup() {
 trap cleanup EXIT
 chmod 600 "$TEMP_FILE"
 
+PROTECTION_GRANT_PRIVATE_KEY=$(
+  openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 2>/dev/null |
+    openssl pkcs8 -topk8 -nocrypt -outform DER 2>/dev/null |
+    base64 | tr -d '\n'
+)
+[ -n "$PROTECTION_GRANT_PRIVATE_KEY" ] || {
+  echo "Failed to generate the protection-grant signing key"
+  exit 1
+}
+
 {
   echo "---"
   printf 'vault_vps_password: %s\n' "$(yaml_quote "$GAMBLOCK_VPS_PASSWORD")"
@@ -51,6 +61,7 @@ chmod 600 "$TEMP_FILE"
   echo "vault_gamblock_backend:"
   printf '  jwt_access_secret: %s\n' "$(yaml_quote "$(openssl rand -hex 32)")"
   printf '  journal_encryption_key: %s\n' "$(yaml_quote "$(openssl rand -hex 32)")"
+  printf '  protection_grant_signing_private_key: %s\n' "$(yaml_quote "$PROTECTION_GRANT_PRIVATE_KEY")"
   printf '  fonnte_token: %s\n' "$(yaml_quote "${GAMBLOCK_FONNTE_TOKEN:-}")"
   echo '  fonnte_base_url: "https://api.fonnte.com"'
   echo '  fonnte_country_code: "62"'
@@ -58,6 +69,8 @@ chmod 600 "$TEMP_FILE"
   printf 'vault_vapid_private_key: %s\n' "$(yaml_quote "${GAMBLOCK_VAPID_PRIVATE_KEY:-}")"
   printf 'vault_cloudflare_api_token: %s\n' "$(yaml_quote "${GAMBLOCK_CLOUDFLARE_API_TOKEN:-}")"
 } > "$TEMP_FILE"
+
+unset PROTECTION_GRANT_PRIVATE_KEY
 
 ansible-vault encrypt \
   --vault-password-file "$VAULT_PASSWORD_FILE" \

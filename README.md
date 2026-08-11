@@ -3,7 +3,7 @@
 Ansible deployment for the Gamblock-AI backend, website, PostgreSQL, and Caddy
 on one Ubuntu VPS.
 
-AI workflow context version: `2026-08-11.1`. Start with [`AGENTS.md`](AGENTS.md)
+AI workflow context version: `2026-08-12.2`. Start with [`AGENTS.md`](AGENTS.md)
 and [`docs/ai/README.md`](docs/ai/README.md).
 
 ## Production shape
@@ -52,7 +52,8 @@ scripts/verify-ai-context.sh --allow-untracked
 `.vault_pass` is ignored and must contain the password for the tracked encrypted
 `group_vars/all/vault.yml`. For a deliberately new environment, `make
 vault-init` prompts for the current VPS root password, generates independent
-PostgreSQL/JWT/AES values, and encrypts the result immediately. It refuses to
+PostgreSQL/JWT/AES values plus a dedicated P-256 protection-grant signing key,
+and encrypts the result immediately. It refuses to
 overwrite an existing vault. Add remaining credentials with `make vault-edit`,
 or update GHCR, Cloudflare, Fonnte, and DeepSeek tokens without opening an
 editor using `make vault-integrations`; blank interactive input preserves the
@@ -75,6 +76,8 @@ all of these are configured in the encrypted vault:
 
 - a GitHub PAT with `read:packages` for private GHCR pulls;
 - valid PostgreSQL, JWT, and AES-256 journal encryption values;
+- a P-256 protection-grant private key whose public key matches the configured
+  client trust store;
 - a connected Fonnte device token;
 - a VAPID private key matching the configured public key; and
 - a DeepSeek API key that can access the configured model whenever
@@ -148,7 +151,10 @@ make cloudflare
 
 GitHub configuration stores only `VPS_PASSWORD` as an Actions secret. Host,
 pinned SSH fingerprint, public URLs, and enable/disable gates are Actions
-variables. The current bootstrapped production environment deliberately keeps
+variables. The Flutter repository additionally receives only the public
+protection-grant trust store; Android/Windows signing material is provisioned
+separately through protected release environments and is never read from the
+deployment vault. The current bootstrapped production environment deliberately keeps
 `ENABLE_VPS_DEPLOY=true`. Cloudflare dry-run is local-only and does not require
 or contact the API.
 
