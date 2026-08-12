@@ -155,8 +155,10 @@ variables. The Flutter repository additionally receives only the public
 protection-grant trust store; Android/Windows signing material is provisioned
 separately through protected release environments and is never read from the
 deployment vault. The current bootstrapped production environment deliberately keeps
-`ENABLE_VPS_DEPLOY=true`. Cloudflare dry-run is local-only and does not require
-or contact the API.
+`ENABLE_VPS_DEPLOY=false`: GitHub-hosted runners cannot reliably reach the
+password-authenticated SSH endpoint. Use the authorized local `make deploy`
+path for production changes. Cloudflare dry-run is local-only and does not
+require or contact the API.
 
 All classification remains on-device. This stack must never receive or log raw
 DOM, URLs, domains, screenshots, or browsing history.

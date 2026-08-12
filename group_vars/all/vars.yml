@@ -87,8 +87,10 @@ github_repos:
   - "Gamblock-AI-Website"
   - "Gamblock-AI-Apps"
 
-# Production bootstrap is complete; CI deploy remains explicitly enabled.
-github_enable_vps_deploy: "true"
+# Production bootstrap is complete. GitHub-hosted runners cannot reliably
+# reach the password-authenticated SSH endpoint, so application deployment is
+# performed through the authorized local `make deploy` path.
+github_enable_vps_deploy: "false"
 github_enable_production_release: "true"
 github_enable_windows_pilot_release: "false"
 

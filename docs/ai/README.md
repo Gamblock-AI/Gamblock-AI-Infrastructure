@@ -58,9 +58,10 @@ check; syntax/check-mode/deployment checks run only on explicit request, and
 external contact still requires authorization.
 
 The production topology is one root/password/port-22 VPS with a pinned SSH
-host key, Docker, PostgreSQL, and Caddy-managed TLS. Both GitHub deploy
-workflows receive the trusted fingerprint as an Actions variable and fail
-closed on a different host identity. The backend deployment template keeps
+host key, Docker, PostgreSQL, and Caddy-managed TLS. GitHub deploy workflows
+retain the pinned-host identity contract but are disabled by default because
+hosted runners cannot reliably reach the password-authenticated SSH endpoint;
+the authorized local `make deploy` path is canonical. The backend deployment template keeps
 `ENABLE_DEV_LOGIN=false` and `ENABLE_DEMO_DATA=false`, mounts
 artifact/export/media/avatar storage, and provides the production values
 required by backend fail-closed configuration validation. Private-GHCR,
