@@ -58,3 +58,21 @@
   delay: 2
   until: pg_ready.rc == 0
   changed_when: false
+
+# One PostgreSQL container serves both environments through separate
+# databases. The production database is created by the container image via
+# POSTGRES_DB; the staging database is created idempotently here.
+- name: "Check staging database"
+  ansible.builtin.shell: |
+    docker exec {{ postgres_container_name }} psql -U {{ gamblock_db_username }} -tAc "SELECT 1 FROM pg_database WHERE datname='{{ staging_db_name }}'"
+  register: staging_db_check
+  changed_when: false
+  when: staging_db_name | default('') | length > 0
+
+- name: "Create staging database"
+  ansible.builtin.shell: |
+    docker exec {{ postgres_container_name }} createdb -U {{ gamblock_db_username }} {{ staging_db_name }}
+  changed_when: true
+  when:
+    - staging_db_name | default('') | length > 0
+    - staging_db_check.stdout | trim != '1'

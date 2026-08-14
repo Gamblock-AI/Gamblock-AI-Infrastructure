@@ -27,6 +27,12 @@
   loop_control:
     label: "{{ item.path }}"
 
+- name: Stop backend before destructive fresh reset
+  community.docker.docker_compose_v2:
+    project_src: "{{ docker_stack_applications }}/{{ gamblock_ai_backend.name }}"
+    state: stopped
+  when: fresh_reset_before_deploy | default(false) | bool
+
 - name: "Deploy Gamblock-AI backend"
   ansible.builtin.include_tasks: ../../common/tasks/deploy-golang-app.yml
   vars:
@@ -35,6 +41,10 @@
     app_port: "{{ gamblock_ai_backend.port }}"
     app_prepare_profiles:
       - tools
-    app_prepare_services:
-      - migrate-up
-      - seeder
+    app_prepare_services: "{{ (['migrate-down', 'reset-storage'] if (fresh_reset_before_deploy | default(false) | bool) else []) + ['migrate-up'] + (seed_plan | default([])) }}"
+    app_update_env:
+      DB_USER: "{{ gamblock_db_username }}"
+      DB_NAME: "{{ gamblock_db_name }}"
+      POSTGRES_CONTAINER_NAME: "{{ postgres_container_name }}"
+      POSTGRES_BACKUP_RETENTION_DAYS: "{{ postgres_backup_retention_days }}"
+      SEED_SERVICES: "{{ (['migrate-up'] + (seed_plan | default([]))) | join(' ') }}"

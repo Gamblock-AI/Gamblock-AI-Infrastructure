@@ -1,0 +1,33 @@
+---
+# Production environment (gamblock-ai.com). Loaded after vars.yml/apps.yml, so
+# it only overrides what differs from the shared/default configuration.
+
+target_environment: production
+
+# ---- Domains ----
+primary_domain: "gamblock-ai.com"
+www_domain: "www.gamblock-ai.com"
+api_domain: "api.gamblock-ai.com"
+
+# ---- Database ----
+gamblock_db_name: "gamblock"
+
+# ---- Backend runtime ----
+gamblock_backend_app_env: "production"
+gamblock_backend_notification_mode: "production"
+gamblock_backend_enable_dev_login: false
+gamblock_backend_enable_demo_data: false
+gamblock_backend_cors_origins:
+  - "https://gamblock-ai.com"
+
+# ---- Seeding plan (one-shot services run after migrate-up) ----
+# Production installs only the four owner-approved demo accounts and their
+# activity fixtures. The demo seeder fails closed when the database contains
+# any account outside that fixture.
+seed_plan:
+  - demo-seeder
+demo_seed_confirm: "CREATE_FOUR_DEMO_ACCOUNTS"
+
+# ---- Destructive reset ----
+# Never enabled in production; deploy only migrates up and seeds.
+fresh_reset_before_deploy: false

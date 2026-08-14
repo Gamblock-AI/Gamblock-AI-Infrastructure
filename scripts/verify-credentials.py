@@ -360,7 +360,12 @@ def verify_ghcr(vault: dict[str, Any], variables: dict[str, Any]) -> None:
     username = clean_string(variables.get("github_registry_username"))
     pat = clean_string(nested(vault, "vault_github_registry_pat"))
     basic = base64.b64encode(f"{username}:{pat}".encode()).decode()
-    for image in ("gamblock-ai-backend", "gamblock-ai-website"):
+    targets = (
+        ("gamblock-ai-backend", "latest"),
+        ("gamblock-ai-website", "latest"),
+        ("gamblock-ai-website", "staging"),
+    )
+    for image, tag in targets:
         scope = urllib.parse.quote(f"repository:gamblock-ai/{image}:pull", safe=":")
         status, auth = request_json(
             f"https://ghcr.io/token?scope={scope}",
@@ -370,7 +375,7 @@ def verify_ghcr(vault: dict[str, Any], variables: dict[str, Any]) -> None:
         if status != 200 or not bearer:
             raise SafeCheckError(f"GHCR did not grant pull access for {image}")
         manifest_request = urllib.request.Request(
-            f"https://ghcr.io/v2/gamblock-ai/{image}/manifests/latest",
+            f"https://ghcr.io/v2/gamblock-ai/{image}/manifests/{tag}",
             headers={
                 "Authorization": f"Bearer {bearer}",
                 "Accept": (
@@ -385,10 +390,10 @@ def verify_ghcr(vault: dict[str, Any], variables: dict[str, Any]) -> None:
             with urllib.request.urlopen(manifest_request, timeout=20) as response:
                 response.read(1)
                 if response.status != 200:
-                    raise SafeCheckError(f"GHCR latest manifest is unavailable for {image}")
+                    raise SafeCheckError(f"GHCR {tag} manifest is unavailable for {image}")
         except urllib.error.HTTPError as exc:
             exc.read()
-            raise SafeCheckError(f"GHCR latest manifest is unavailable for {image}") from exc
+            raise SafeCheckError(f"GHCR {tag} manifest is unavailable for {image}") from exc
         except (urllib.error.URLError, TimeoutError) as exc:
             raise SafeCheckError(f"GHCR request failed for {image} ({type(exc).__name__})") from exc
 

@@ -1,13 +1,29 @@
 #!/bin/bash
 # Pull the latest image for this application and restart it. Root is logged in
 # to GHCR once by Ansible, so no plaintext registry password file is needed.
+# Environment-specific behavior (database name, user, and the seeding plan)
+# comes from update.env, rendered per application directory by Ansible.
 set -euo pipefail
 
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 COMPOSE_PROJECT_NAME=$(basename "$PWD")
 LOG_FILE="/var/log/docker-updates/${COMPOSE_PROJECT_NAME}.log"
+
+# Environment-specific configuration rendered by Ansible. Only the backend
+# directory carries database values; website directories simply omit them.
+UPDATE_ENV_FILE="${UPDATE_ENV_FILE:-update.env}"
+if [ -f "$UPDATE_ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$UPDATE_ENV_FILE"
+  set +a
+fi
+
+DB_USER="${DB_USER:-gamblock}"
+DB_NAME="${DB_NAME:-gamblock}"
 POSTGRES_CONTAINER_NAME="${POSTGRES_CONTAINER_NAME:-postgres-db}"
 POSTGRES_BACKUP_RETENTION_DAYS="${POSTGRES_BACKUP_RETENTION_DAYS:-14}"
+SEED_SERVICES="${SEED_SERVICES:-}"
 
 case "$POSTGRES_BACKUP_RETENTION_DAYS" in
   ""|*[!0-9]*)
@@ -43,9 +59,10 @@ docker compose -f "$COMPOSE_FILE" pull || error_exit "docker compose pull failed
 # The backend compose file exposes guarded one-shot database tools. Website
 # compose files have no migrate-up service and skip this entire block.
 if docker compose -f "$COMPOSE_FILE" config --services | grep -qx 'migrate-up'; then
-  log "Backing up PostgreSQL"
-  docker exec "$POSTGRES_CONTAINER_NAME" sh -c \
-    'pg_dump --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --format=custom --file="/backups/pre-update-$(date +%Y%m%dT%H%M%S).dump"' \
+  log "Backing up PostgreSQL database $DB_NAME"
+  docker exec "$POSTGRES_CONTAINER_NAME" pg_dump \
+    --username="$DB_USER" --dbname="$DB_NAME" --format=custom \
+    --file="/backups/pre-update-$(date +%Y%m%dT%H%M%S).dump" \
     || error_exit "database backup failed"
 
   log "Pruning pre-update backups older than ${POSTGRES_BACKUP_RETENTION_DAYS} days"
@@ -53,13 +70,14 @@ if docker compose -f "$COMPOSE_FILE" config --services | grep -qx 'migrate-up'; 
     -name 'pre-update-*.dump' -mtime "+${POSTGRES_BACKUP_RETENTION_DAYS}" -delete \
     || error_exit "database backup retention cleanup failed"
 
-  log "Applying database migrations"
-  docker compose -f "$COMPOSE_FILE" --profile tools run --rm --no-deps migrate-up \
-    || error_exit "database migration failed"
-
-  log "Installing production-safe seed defaults"
-  docker compose -f "$COMPOSE_FILE" --profile tools run --rm --no-deps seeder \
-    || error_exit "database seeding failed"
+  # Run each one-shot service in the rendered seeding plan. The guarded
+  # services (migrate-down/reset-storage/demo-seeder) refuse to run without
+  # their exact confirmation variables from the application .env.
+  for SERVICE in $SEED_SERVICES; do
+    log "Running prepare service: $SERVICE"
+    docker compose -f "$COMPOSE_FILE" --profile tools run --rm --no-deps "$SERVICE" \
+      || error_exit "prepare service $SERVICE failed"
+  done
 fi
 
 # Recreate containers with the new image.

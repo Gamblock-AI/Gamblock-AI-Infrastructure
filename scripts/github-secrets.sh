@@ -82,9 +82,11 @@ for repo in "${DEPLOY_REPOS[@]}"; do
   set_variable "$repo" "ENABLE_VPS_DEPLOY" "$(get_var github_enable_vps_deploy)"
 done
 
-set_variable "Gamblock-AI-Website" "NEXT_PUBLIC_API_URL" "https://$(get_var api_domain)"
-set_variable "Gamblock-AI-Website" "NEXT_PUBLIC_APP_URL" "https://$(get_var primary_domain)"
+set_variable "Gamblock-AI-Website" "NEXT_PUBLIC_API_URL" "https://$(get_var production_api_domain)"
+set_variable "Gamblock-AI-Website" "NEXT_PUBLIC_APP_URL" "https://$(get_var production_primary_domain)"
 set_variable "Gamblock-AI-Website" "NEXT_PUBLIC_VAPID_PUBLIC_KEY" "$(get_var vapid_public_key)"
+set_variable "Gamblock-AI-Website" "NEXT_PUBLIC_API_URL_STAGING" "https://$(get_var staging_api_domain)"
+set_variable "Gamblock-AI-Website" "NEXT_PUBLIC_APP_URL_STAGING" "https://$(get_var staging_primary_domain)"
 
 echo -e "${BLUE}-- $OWNER/$FLUTTER_REPO --${NC}"
 set_variable "$FLUTTER_REPO" "DEV_API_BASE_URL" "$(get_var flutter_development_api_url)"

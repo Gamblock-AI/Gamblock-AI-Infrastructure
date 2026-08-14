@@ -7,6 +7,7 @@
   vars_files:
     - ../group_vars/all/vars.yml
     - ../group_vars/all/apps.yml
+    - "../group_vars/environments/{{ target_environment | default('production') }}.yml"
     - "{{ lookup('ansible.builtin.env', 'GAMBLOCK_LINT_VAULT_FILE') if lookup('ansible.builtin.env', 'GAMBLOCK_LINT_MODE') == '1' else '../group_vars/all/vault.yml' }}"
 
   vars:

@@ -55,6 +55,16 @@ services:
     networks:
       - {{ postgres_network }}
 
+  seed-learning-hub:
+    image: {{ gamblock_ai_backend.image }}
+    profiles: ["tools"]
+    entrypoint: ["/app/seed-learning-hub"]
+    env_file: .env
+    volumes:
+      - {{ gamblock_ai_backend.name }}_media:/app/var/media
+    networks:
+      - {{ postgres_network }}
+
   demo-seeder:
     image: {{ gamblock_ai_backend.image }}
     profiles: ["tools"]

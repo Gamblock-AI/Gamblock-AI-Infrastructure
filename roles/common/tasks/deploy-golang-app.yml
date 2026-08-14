@@ -45,6 +45,19 @@
     group: root
   no_log: true
 
+- name: "Render update.env"
+  ansible.builtin.copy:
+    dest: "{{ app_install_dir }}/update.env"
+    content: |
+      {% for key, value in (app_update_env | default({})).items() %}
+      {{ key }}={{ value }}
+      {% endfor %}
+    mode: "0600"
+    owner: root
+    group: root
+  when: (app_update_env | default({})) | length > 0
+  no_log: true
+
 - name: "Log in to GHCR"
   community.docker.docker_login:
     registry_url: "{{ github_registry }}"

@@ -1,5 +1,6 @@
 #!/bin/bash
 # Wait until the public website and API are both healthy through Cloudflare.
+# Usage: scripts/verify-production.sh [production|staging]
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,8 +12,15 @@ command -v curl >/dev/null 2>&1 || {
   exit 1
 }
 
-PRIMARY_DOMAIN=$(get_var "primary_domain")
-API_DOMAIN=$(get_var "api_domain")
+ENV_NAME="${1:-production}"
+if [ "$ENV_NAME" = "staging" ]; then
+  PRIMARY_DOMAIN=$(get_var "staging_primary_domain")
+  API_DOMAIN=$(get_var "staging_api_domain")
+else
+  PRIMARY_DOMAIN=$(get_var "production_primary_domain")
+  API_DOMAIN=$(get_var "production_api_domain")
+fi
+
 MAX_ATTEMPTS=${PRODUCTION_VERIFY_ATTEMPTS:-60}
 WAIT_SECONDS=${PRODUCTION_VERIFY_INTERVAL_SECONDS:-5}
 WEBSITE_URL="https://$PRIMARY_DOMAIN/"
@@ -22,7 +30,7 @@ is_ready() {
   curl --silent --fail --location --max-time 15 --output /dev/null "$1" 2>/dev/null
 }
 
-echo -e "${BLUE}=== Verify production endpoints ===${NC}"
+echo -e "${BLUE}=== Verify $ENV_NAME endpoints ===${NC}"
 for ((attempt = 1; attempt <= MAX_ATTEMPTS; attempt++)); do
   website_ready=false
   api_ready=false
@@ -41,7 +49,7 @@ for ((attempt = 1; attempt <= MAX_ATTEMPTS; attempt++)); do
   fi
 done
 
-echo -e "${RED}Production did not become healthy within the verification window.${NC}" >&2
+echo -e "${RED}$ENV_NAME did not become healthy within the verification window.${NC}" >&2
 echo "Website: $WEBSITE_URL" >&2
 echo "API: $API_URL" >&2
 exit 1

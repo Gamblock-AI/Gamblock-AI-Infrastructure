@@ -1,0 +1,61 @@
+---
+# Staging environment (staging.gamblock-ai.com). Loaded after vars.yml and
+# apps.yml, so it overrides the catalog, database, backend runtime, and the
+# seeding plan for the staging containers on the same VPS.
+
+target_environment: staging
+
+# ---- Application catalog (staging containers) ----
+gamblock_ai_backend:
+  name: "gamblock-ai-backend-staging"
+  enabled: true
+  image: "ghcr.io/gamblock-ai/gamblock-ai-backend:latest"
+  port: "{{ gamblock_ai_backend_staging_port }}"
+  requires_database: true
+  networks:
+    - "{{ proxy_network }}"
+    - "{{ postgres_network }}"
+  env_template: "roles/applications/gamblock-ai-backend-setup/templates/.env.j2"
+
+gamblock_ai_website:
+  name: "gamblock-ai-website-staging"
+  enabled: true
+  image: "ghcr.io/gamblock-ai/gamblock-ai-website:staging"
+  port: "{{ gamblock_ai_website_staging_port }}"
+  requires_database: false
+  networks:
+    - "{{ proxy_network }}"
+  env_template: "roles/applications/gamblock-ai-website-setup/templates/.env.j2"
+
+# ---- Domains ----
+primary_domain: "staging.gamblock-ai.com"
+api_domain: "api.staging.gamblock-ai.com"
+
+# ---- Database (separate database, same PostgreSQL container) ----
+gamblock_db_name: "gamblock_staging"
+
+# ---- Backend runtime ----
+# staging is intentionally NOT production: WhatsApp codes are demo previews
+# (no real messages), dev login is available, and fail-closed production
+# validation does not apply.
+gamblock_backend_app_env: "staging"
+gamblock_backend_notification_mode: "demo"
+gamblock_backend_enable_dev_login: true
+gamblock_backend_enable_demo_data: false
+gamblock_backend_cors_origins:
+  - "https://staging.gamblock-ai.com"
+
+# ---- Seeding plan (every seeder available in the backend image) ----
+seed_plan:
+  - seeder
+  - seed-learning-hub
+  - demo-seeder
+demo_seed_confirm: "CREATE_FOUR_DEMO_ACCOUNTS"
+
+# ---- Destructive reset ----
+# Staging starts from a fresh, fully seeded demo database on every deploy:
+# the API is stopped, the schema is dropped, storage is reset, migrations are
+# re-applied, and the complete seeding plan runs.
+fresh_reset_before_deploy: true
+migrate_down_confirm: "DROP_ALL_DATA"
+reset_storage_confirm: "DELETE_DYNAMIC_STORAGE"

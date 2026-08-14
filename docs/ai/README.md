@@ -3,7 +3,7 @@
 
 Jika ada pertentangan dengan `pkm_proposal.md`, proposal PKM adalah sumber mutlak.
 
-Context version: `2026-08-14.3`
+Context version: `2026-08-15.1`
 
 This repository is intentionally self-contained. A clone does not need a
 parent workspace to discover its product constraints, infrastructure workflow,
@@ -57,29 +57,42 @@ cloud inference or browsing-data collection. `make lint` is the default AI
 check; syntax/check-mode/deployment checks run only on explicit request, and
 external contact still requires authorization.
 
-The production topology is one root/password/port-22 VPS with a pinned SSH
-host key, Docker, PostgreSQL, and Caddy-managed TLS. GitHub deploy workflows
+The topology is one root/password/port-22 VPS with a pinned SSH host key,
+Docker, one PostgreSQL 16 container, and Caddy-managed TLS serving two
+environments: production (`gamblock-ai.com` + `api.gamblock-ai.com`) and
+staging (`staging.gamblock-ai.com` + `api.staging.gamblock-ai.com`). Each
+environment uses its own database (`gamblock` vs `gamblock_staging`), its own
+application containers and internal ports, and its own domains; Caddy routes
+all five hosts from one Caddyfile. Environment-specific variables live in
+`group_vars/environments/{production,staging}.yml`, loaded through the
+`environment` extra var (`make deploy ENV=staging`). GitHub deploy workflows
 retain the pinned-host identity contract but are disabled by default because
 hosted runners cannot reliably reach the password-authenticated SSH endpoint;
-the authorized local `make deploy` path is canonical. The backend deployment template keeps
-`ENABLE_DEV_LOGIN=false` and `ENABLE_DEMO_DATA=false`, mounts
-artifact/export/media/avatar storage, and provides the production values
-required by backend fail-closed configuration validation. Private-GHCR,
-Fonnte, VAPID, the device-bound protection-grant P-256 keypair, and—while the
-SPK LLM gate is enabled—DeepSeek credentials are pre-deployment gates. The
-credential validator matches the active backend private key to the public
-Android/Windows trust-store entry without printing either value. Public Next.js variables are
-build-time image inputs and are not secret runtime Ansible substitutions.
+the authorized local `make deploy` path is canonical. The backend deployment
+template keeps production on `APP_ENV=production` with dev login/demo data
+disabled, mounts artifact/export/media/avatar storage, and provides the
+production values required by backend fail-closed configuration validation.
+Private-GHCR, Fonnte, VAPID, the device-bound protection-grant P-256 keypair,
+and—while the SPK LLM gate is enabled—DeepSeek credentials are pre-deployment
+gates. The credential validator matches the active backend private key to the
+public Android/Windows trust-store entry without printing either value. Public
+Next.js variables are build-time image inputs and are not secret runtime
+Ansible substitutions; the staging website image (`:staging`) is built by
+website CI with the staging public URLs.
 
 The complete `make deploy` path first validates GHCR, Cloudflare, Fonnte, and
 DeepSeek credentials through read-only provider endpoints, then reconciles
 Cloudflare DNS before Caddy certificate issuance, snapshots PostgreSQL, runs
-the image's migrate-up and production-safe seeder one-shot services, starts the
-applications, and waits for both public HTTPS endpoints. Ansible and CI update
-backups older than 14 days are removed.
-Migrate-down, dynamic-storage reset, and the four-account demo seeder exist as
-separately guarded manual tools only and are never invoked by Ansible or
-deployment updates.
+the environment's seeding plan, starts the applications, and waits for both
+public HTTPS endpoints. Seeding differs per environment: production runs
+`migrate-up` plus the four-account `demo-seeder` only (which fails closed when
+foreign accounts exist), while staging performs a fresh reset on every deploy
+(stop API → guarded `migrate-down`/`reset-storage` → `migrate-up` →
+`seeder` → `seed-learning-hub` → `demo-seeder`). Ansible and CI update
+backups older than 14 days are removed. `update.sh` remains non-destructive
+and environment-aware through the rendered `update.env`.
+Migrate-down, dynamic-storage reset, and the four-account demo seeder remain
+separately guarded manual tools and are never invoked by `update.sh`.
 
 Production-host evidence rechecked on 2026-08-11: the
 root/password/pinned-host-key connection passed on the configured VPS. UFW,

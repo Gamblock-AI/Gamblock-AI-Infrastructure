@@ -1,5 +1,6 @@
 ---
-# Central application catalog for Gamblock-AI.
+# Default application catalog (production shape). The staging environment file
+# overrides the name, image tag, and port for the staging containers.
 
 gamblock_ai_backend:
   name: "gamblock-ai-backend"

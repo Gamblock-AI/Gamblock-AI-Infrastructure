@@ -5,7 +5,7 @@ This repository is self-contained and requires no external workspace context.
 `AGENTS.md` is the canonical instruction file; provider adapters and the
 context manifest are indexed in `docs/ai/README.md`.
 
-Context version: `2026-08-14.3`
+Context version: `2026-08-15.1`
 
 ## Product safety boundaries
 
@@ -42,16 +42,19 @@ Makefile                 # local validation and explicitly invoked operations
 inventory/hosts.ini      # target VPS host and connection metadata
 inventory/known_hosts    # pinned production host identity
 group_vars/all/
-  vars.yml               # non-sensitive configuration
-  apps.yml               # application/container catalog
+  vars.yml               # non-sensitive shared configuration (both environments)
+  apps.yml               # default application catalog (production shape)
   vault.yml              # encrypted Ansible Vault data
+group_vars/environments/
+  production.yml         # production overrides (domains, DB, runtime, seeding)
+  staging.yml            # staging overrides (containers, DB, runtime, seeding)
 playbooks/
-  server-setup.yml       # main provisioning playbook
+  server-setup.yml       # main provisioning playbook (environment extra var)
 roles/
   common/                # shared deploy tasks and update.sh
   system/                # base host configuration
   infrastructure/        # Docker and Caddy setup
-  databases/             # PostgreSQL setup
+  databases/             # PostgreSQL setup (one container, two databases)
   applications/          # backend and website deployments
 scripts/                 # GitHub and Cloudflare helper scripts
 docs/ai/                 # versioned AI-context index and manifest
@@ -74,17 +77,47 @@ process; normal playbook commands default to the encrypted
 `group_vars/all/vault.yml`. Never export the lint-mode variables for an
 operational command.
 
-`make deploy` is the complete production path: it first validates configured
+`make deploy` is the complete deployment path: it first validates configured
 provider credentials through read-only endpoints, reconciles Cloudflare DNS,
 provisions the host, snapshots PostgreSQL, runs backend migrate-up and the
-production-safe seeder, starts both applications and Caddy, then waits for the
-public website and API health endpoints. It never invokes migrate-down.
+environment's seeding plan, starts both applications and Caddy, then waits for
+the public website and API health endpoints. It never invokes migrate-down.
+The target environment is selected with `ENV`: `make deploy` (production) or
+`make deploy ENV=staging`.
 
-The backend Compose `tools` profile also exposes owner-invoked
-`migrate-down`, `reset-storage`, and `demo-seeder` services. They require exact
-confirmation variables at invocation time and must never be added to
-`app_prepare_services` or `update.sh`; normal deploys remain non-destructive
-and demo-free.
+Environment-specific configuration lives in
+`group_vars/environments/{production,staging}.yml` and is loaded through the
+`environment` extra var. Both environments share one VPS, one PostgreSQL
+container, one Caddy, and the shared networks, but use separate databases
+(`gamblock` vs `gamblock_staging`), separate application containers/ports, and
+separate domains. Caddy serves all five hosts (www redirect, production,
+api, staging, api.staging) from one Caddyfile.
+
+Seeding plans differ by environment:
+
+- Production runs `migrate-up` plus `demo-seeder` only: the four
+  owner-approved demo accounts and their activity fixtures. The demo seeder
+  fails closed when the database contains any account outside that fixture.
+- Staging is reset fresh on every deploy: the staging API is stopped,
+  `migrate-down` and `reset-storage` run with their confirmation variables,
+  then `migrate-up`, `seeder`, `seed-learning-hub`, and `demo-seeder` run —
+  every seeder available in the backend image. The staging backend uses
+  `APP_ENV=staging`, demo WhatsApp codes, and dev login; it never uses
+  `ENABLE_DEMO_DATA` (it still persists to PostgreSQL).
+
+`update.sh` stays non-destructive and environment-aware: it sources the
+Ansible-rendered `update.env` (database name/user, container, seeding plan)
+and never performs a fresh reset. Guarded tools (`migrate-down`,
+`reset-storage`, `demo-seeder`) receive their exact confirmation variables
+from the rendered application `.env` and are never added outside the staging
+fresh-reset path.
+
+The backend Compose `tools` profile exposes owner-invoked
+`migrate-down`, `reset-storage`, `seeder`, `seed-learning-hub`, and
+`demo-seeder` services. They require exact confirmation variables at invocation
+time. Only `migrate-up` and the environment's seeding plan run during normal
+deploys; `migrate-down`/`reset-storage` run only inside the staging
+fresh-reset path and are never added to `update.sh`.
 
 `make credential-check` opens the encrypted vault in memory and prints only
 field-level status; it still requires explicit vault-access authorization.

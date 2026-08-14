@@ -1,13 +1,23 @@
-{{ www_domain }} {
-  redir https://{{ primary_domain }}{uri} permanent
+{{ production_www_domain }} {
+  redir https://{{ production_primary_domain }}{uri} permanent
 }
 
-{{ primary_domain }} {
+{{ production_primary_domain }} {
   encode zstd gzip
-  reverse_proxy {{ gamblock_ai_website.name }}:{{ gamblock_ai_website.port }}
+  reverse_proxy {{ gamblock_ai_website_container }}:{{ gamblock_ai_website_port }}
 }
 
-{{ api_domain }} {
+{{ production_api_domain }} {
   encode zstd gzip
-  reverse_proxy {{ gamblock_ai_backend.name }}:{{ gamblock_ai_backend.port }}
+  reverse_proxy {{ gamblock_ai_backend_container }}:{{ gamblock_ai_backend_port }}
+}
+
+{{ staging_primary_domain }} {
+  encode zstd gzip
+  reverse_proxy {{ gamblock_ai_website_staging_container }}:{{ gamblock_ai_website_staging_port }}
+}
+
+{{ staging_api_domain }} {
+  encode zstd gzip
+  reverse_proxy {{ gamblock_ai_backend_staging_container }}:{{ gamblock_ai_backend_staging_port }}
 }

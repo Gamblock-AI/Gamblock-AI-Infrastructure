@@ -6,7 +6,9 @@
 
 PLAYBOOK = playbooks/server-setup.yml
 INVENTORY = inventory/hosts.ini
-OPTS = -i $(INVENTORY)
+# Target environment: production (default) or staging. Pass as `make deploy ENV=staging`.
+ENV ?= production
+OPTS = -i $(INVENTORY) -e target_environment=$(ENV)
 VAULT_FILE = group_vars/all/vault.yml
 LINT_ANSIBLE_CONFIG = $(CURDIR)/ansible-lint.cfg
 LINT_VAULT_FILE = $(CURDIR)/group_vars/all/vault.yml.example
@@ -40,11 +42,11 @@ credential-check: ## Validate the encrypted production credential contract local
 credential-check-online: ## Validate credentials against read-only provider endpoints
 	@python3 scripts/verify-credentials.py --online
 
-deploy: check ## Prepare DNS/database, deploy the full stack, and verify production
+deploy: check ## Prepare DNS/database, deploy the $(ENV) stack, and verify it
 	@python3 scripts/verify-credentials.py --online
 	@./scripts/cloudflare-dns.sh
 	@ansible-playbook $(OPTS) $(PLAYBOOK)
-	@./scripts/verify-production.sh
+	@./scripts/verify-production.sh $(ENV)
 
 bootstrap: check ## Provision host, Docker, database, and Caddy without apps
 	@ansible-playbook $(OPTS) $(PLAYBOOK) \

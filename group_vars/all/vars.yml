@@ -1,18 +1,31 @@
 ---
-# Non-sensitive variables (plain text). Secrets live in vault.yml.
+# Non-sensitive variables shared by every environment (plain text). Secrets
+# live in vault.yml. Environment-specific values (app catalog overrides,
+# domains, database name, backend runtime flags, and the seeding plan) live in
+# group_vars/environments/{production,staging}.yml.
 
 # ---- GitHub Container Registry ----
 github_registry: "ghcr.io"
 github_registry_username: "Alfian57"
 
-# ---- Domains ----
-primary_domain: "gamblock-ai.com"
-www_domain: "www.gamblock-ai.com"
-api_domain: "api.gamblock-ai.com"
+# ---- Domains (both environments; Caddy renders every site from here) ----
+production_primary_domain: "gamblock-ai.com"
+production_www_domain: "www.gamblock-ai.com"
+production_api_domain: "api.gamblock-ai.com"
+staging_primary_domain: "staging.gamblock-ai.com"
+staging_api_domain: "api.staging.gamblock-ai.com"
 
 # ---- Application ports (internal container ports) ----
 gamblock_ai_backend_port: 8080
+gamblock_ai_backend_staging_port: 8081
 gamblock_ai_website_port: 3000
+gamblock_ai_website_staging_port: 3001
+
+# ---- Container names used by Caddy routing and one-shot tooling ----
+gamblock_ai_backend_container: "gamblock-ai-backend"
+gamblock_ai_backend_staging_container: "gamblock-ai-backend-staging"
+gamblock_ai_website_container: "gamblock-ai-website"
+gamblock_ai_website_staging_container: "gamblock-ai-website-staging"
 
 # ---- Docker stack paths ----
 docker_stack_base: "/opt/docker-stack"
@@ -25,11 +38,12 @@ postgres_network: "postgres_network"
 # ---- Caddy ----
 caddy_image: "caddy:2.11.4-alpine"
 
-# ---- PostgreSQL ----
+# ---- PostgreSQL (one shared container, two databases) ----
 postgres_image: "postgres:16-alpine"
 postgres_container_name: "postgres-db"
 postgres_port: 5432
-gamblock_db_name: "gamblock"
+postgres_default_db_name: "gamblock"
+staging_db_name: "gamblock_staging"
 gamblock_db_username: "gamblock"
 postgres_backup_retention_days: 14
 
@@ -109,5 +123,11 @@ cloudflare_records:
     type: "A"
     proxied: true
   - name: "api"
+    type: "A"
+    proxied: true
+  - name: "staging"
+    type: "A"
+    proxied: true
+  - name: "api.staging"
     type: "A"
     proxied: true

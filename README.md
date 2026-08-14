@@ -3,17 +3,27 @@
 Ansible deployment for the Gamblock-AI backend, website, PostgreSQL, and Caddy
 on one Ubuntu VPS.
 
-AI workflow context version: `2026-08-14.3`. Start with [`AGENTS.md`](AGENTS.md)
+AI workflow context version: `2026-08-15.1`. Start with [`AGENTS.md`](AGENTS.md)
 and [`docs/ai/README.md`](docs/ai/README.md).
 
-## Production shape
+## Environment shape
 
-- `https://gamblock-ai.com` → website
+One VPS hosts two environments through one Docker stack:
+
+| Environment | Website | API | Database |
+|---|---|---|---|
+| production | `https://gamblock-ai.com` | `https://api.gamblock-ai.com` | `gamblock` |
+| staging | `https://staging.gamblock-ai.com` | `https://api.staging.gamblock-ai.com` | `gamblock_staging` |
+
 - `https://www.gamblock-ai.com` → permanent apex redirect
-- `https://api.gamblock-ai.com` → backend
 - Cloudflare proxied DNS in Full (strict) mode
-- Caddy `2.11.4-alpine` with automatic origin TLS
-- PostgreSQL 16 and private GHCR application images
+- one Caddy `2.11.4-alpine` serving all five hosts
+- one PostgreSQL 16 container with two databases
+- separate application containers per environment
+  (`gamblock-ai-backend[-staging]` on 8080/8081,
+  `gamblock-ai-website[-staging]` on 3000/3001, the staging website image
+  `ghcr.io/gamblock-ai/gamblock-ai-website:staging` carries its own baked
+  staging API origin)
 - one SSH account: `root`, password authentication, port 22
 
 The inventory pins the VPS ED25519 host identity. UFW permits only SSH, HTTP,
@@ -28,6 +38,7 @@ ansible.cfg
 inventory/hosts.ini
 inventory/known_hosts
 group_vars/all/{vars.yml,apps.yml,vault.yml,vault.yml.example}
+group_vars/environments/{production,staging}.yml
 playbooks/server-setup.yml
 roles/system/base-setup/
 roles/infrastructure/{docker-setup,caddy-setup}/
@@ -94,46 +105,55 @@ with Zone Read, DNS Edit, and Zone Settings Edit for `gamblock-ai.com`.
 ```sh
 make ping
 make bootstrap
-make deploy
+make deploy                 # production (gamblock-ai.com)
+make deploy ENV=staging     # staging (staging.gamblock-ai.com)
 make app APP=gamblock-ai-backend
-make app APP=gamblock-ai-website
+make app APP=gamblock-ai-backend ENV=staging
+make app APP=gamblock-ai-website ENV=staging
 make ssh
 ```
 
-`bootstrap` provisions the host, Docker, PostgreSQL, and Caddy without the
-third-party application gates. `deploy` is the one-command production path: it
-updates Cloudflare DNS/strict SSL, provisions the complete stack, creates a
-pre-deploy PostgreSQL backup, runs `migrate-up` and the production-safe seeder,
-starts the backend/website/Caddy, and waits until the public website and API
-health endpoint both answer successfully. `app` selects the requested role;
-the backend role also performs backup, migration, and safe seeding.
+`bootstrap` provisions the host, Docker, PostgreSQL (both databases), and Caddy
+without the third-party application gates. `deploy` is the one-command path for
+the selected environment: it updates Cloudflare DNS/strict SSL, provisions the
+stack, creates a pre-deploy PostgreSQL backup, runs `migrate-up` and the
+environment's seeding plan, starts the applications and Caddy, and waits until
+the environment's public website and API health endpoints both answer. `app`
+selects the requested role for the selected environment.
 
-The backend template disables development login/demo data, uses one PostgreSQL
-password consistently, requires the production Fonnte adapter, explicitly
-wires the DeepSeek SPK gate, and mounts artifact, export, education-media, and
-avatar storage. Its `tools` profile exposes
-`migrate-up`, guarded `migrate-down`, guarded `reset-storage`, `seeder`, and
-the owner-confirmed `demo-seeder`; automatic deployment calls only migrate-up
-and the production-safe seeder. The destructive/manual services require their
-exact confirmation environment variables and are never invoked by Ansible's
-normal deploy path. Pre-deploy and CI update backups are retained for
-14 days. The website's public API, app URL, and VAPID public key are Docker
-build-time
-GitHub variables; Ansible cannot retrofit them into an already-built Next.js
-image. The backend template renders the matching `VAPID_PUBLIC_KEY`,
-`VAPID_PRIVATE_KEY` (from the encrypted vault), and `VAPID_SUBJECT` for the
-opt-in daily Web Push reminder.
+Seeding plans per environment:
 
-An owner-approved fresh demo reset is performed only from the rendered backend
-application directory while the API is stopped:
+- **production** — `migrate-up` + `demo-seeder` only (the four demo accounts
+  and their activity fixtures). The demo seeder refuses any database that
+  contains accounts outside the approved fixture, so the deploy fails closed
+  once real student accounts exist.
+- **staging** — fresh reset on every deploy: the staging API is stopped,
+  `migrate-down` + `reset-storage` run with their confirmation variables,
+  then `migrate-up`, `seeder`, `seed-learning-hub`, and `demo-seeder` run.
+  The staging backend uses `APP_ENV=staging` with demo WhatsApp codes and dev
+  login while still persisting to PostgreSQL.
+
+The backend template keeps production development login/demo data disabled,
+mounts artifact, export, education-media, and avatar storage, and renders the
+guarded confirmation variables for the one-shot tools. `update.sh` sources the
+Ansible-rendered `update.env` (database name/user, container, seeding plan),
+stays non-destructive, and never performs a fresh reset. Pre-deploy and update
+backups are retained for 14 days. The website's public API, app URL, and VAPID
+public key are Docker build-time GitHub variables; the staging website image is
+built by website CI with the staging variables. The backend template renders
+the matching `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (from the encrypted
+vault), and `VAPID_SUBJECT` for the opt-in daily Web Push reminder.
+
+An owner-approved manual demo reset on a running environment is performed only
+from the rendered backend application directory while the API is stopped:
 
 ```sh
-docker compose stop gamblock-ai-backend
+docker compose stop <backend-container>
 docker compose --profile tools run --rm --no-deps -e CONFIRM_MIGRATE_DOWN=DROP_ALL_DATA migrate-down
 docker compose --profile tools run --rm --no-deps -e CONFIRM_RESET_STORAGE=DELETE_DYNAMIC_STORAGE reset-storage
 docker compose --profile tools run --rm --no-deps migrate-up
 docker compose --profile tools run --rm --no-deps -e CONFIRM_DEMO_SEED=CREATE_FOUR_DEMO_ACCOUNTS demo-seeder
-docker compose up -d --no-deps gamblock-ai-backend
+docker compose up -d --no-deps <backend-container>
 ```
 
 Keep the API stopped if any one-shot service fails. The demo seeder accepts an
