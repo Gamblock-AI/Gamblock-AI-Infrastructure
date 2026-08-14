@@ -91,7 +91,7 @@ Environment-specific configuration lives in
 container, one Caddy, and the shared networks, but use separate databases
 (`gamblock` vs `gamblock_staging`), separate application containers/ports, and
 separate domains. Caddy serves all five hosts (www redirect, production,
-api, staging, api.staging) from one Caddyfile.
+api, staging, api-staging) from one Caddyfile.
 
 Seeding plans differ by environment:
 

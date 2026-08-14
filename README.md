@@ -13,15 +13,16 @@ One VPS hosts two environments through one Docker stack:
 | Environment | Website | API | Database |
 |---|---|---|---|
 | production | `https://gamblock-ai.com` | `https://api.gamblock-ai.com` | `gamblock` |
-| staging | `https://staging.gamblock-ai.com` | `https://api.staging.gamblock-ai.com` | `gamblock_staging` |
+| staging | `https://staging.gamblock-ai.com` | `https://api-staging.gamblock-ai.com` | `gamblock_staging` |
 
 - `https://www.gamblock-ai.com` → permanent apex redirect
 - Cloudflare proxied DNS in Full (strict) mode
 - one Caddy `2.11.4-alpine` serving all five hosts
 - one PostgreSQL 16 container with two databases
 - separate application containers per environment
-  (`gamblock-ai-backend[-staging]` on 8080/8081,
-  `gamblock-ai-website[-staging]` on 3000/3001, the staging website image
+  (`gamblock-ai-backend[-staging]`, `gamblock-ai-website[-staging]`; identical
+  internal ports 8080/3000 because each container has its own network
+  namespace; the staging website image
   `ghcr.io/gamblock-ai/gamblock-ai-website:staging` carries its own baked
   staging API origin)
 - one SSH account: `root`, password authentication, port 22

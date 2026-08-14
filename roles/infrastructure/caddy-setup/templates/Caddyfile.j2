@@ -14,10 +14,10 @@
 
 {{ staging_primary_domain }} {
   encode zstd gzip
-  reverse_proxy {{ gamblock_ai_website_staging_container }}:{{ gamblock_ai_website_staging_port }}
+  reverse_proxy {{ gamblock_ai_website_staging_container }}:{{ gamblock_ai_website_port }}
 }
 
 {{ staging_api_domain }} {
   encode zstd gzip
-  reverse_proxy {{ gamblock_ai_backend_staging_container }}:{{ gamblock_ai_backend_staging_port }}
+  reverse_proxy {{ gamblock_ai_backend_staging_container }}:{{ gamblock_ai_backend_port }}
 }

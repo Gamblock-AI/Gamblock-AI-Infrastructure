@@ -13,13 +13,15 @@ production_primary_domain: "gamblock-ai.com"
 production_www_domain: "www.gamblock-ai.com"
 production_api_domain: "api.gamblock-ai.com"
 staging_primary_domain: "staging.gamblock-ai.com"
-staging_api_domain: "api.staging.gamblock-ai.com"
+# Single-label subdomain: the Cloudflare Free-plan Universal SSL certificate
+# covers only `gamblock-ai.com` and `*.gamblock-ai.com`, so the staging API
+# must stay a one-label hostname (`api.staging.*` would have no edge cert).
+staging_api_domain: "api-staging.gamblock-ai.com"
 
-# ---- Application ports (internal container ports) ----
+# ---- Application ports (internal container ports; identical across
+# environments because each container has its own network namespace) ----
 gamblock_ai_backend_port: 8080
-gamblock_ai_backend_staging_port: 8081
 gamblock_ai_website_port: 3000
-gamblock_ai_website_staging_port: 3001
 
 # ---- Container names used by Caddy routing and one-shot tooling ----
 gamblock_ai_backend_container: "gamblock-ai-backend"
@@ -128,6 +130,6 @@ cloudflare_records:
   - name: "staging"
     type: "A"
     proxied: true
-  - name: "api.staging"
+  - name: "api-staging"
     type: "A"
     proxied: true

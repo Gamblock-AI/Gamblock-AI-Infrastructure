@@ -3,6 +3,9 @@ services:
     image: {{ caddy_image }}
     container_name: gamblock-caddy
     restart: unless-stopped
+    # --watch reloads the bind-mounted Caddyfile automatically when it changes,
+    # so site/route edits apply without recreating the container.
+    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile", "--watch"]
     ports:
       - "80:80"
       - "443:443"

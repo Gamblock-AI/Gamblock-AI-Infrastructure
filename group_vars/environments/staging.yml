@@ -5,12 +5,13 @@
 
 target_environment: staging
 
-# ---- Application catalog (staging containers) ----
+# ---- Application catalog (staging containers; same internal ports as
+# production since each container has its own network namespace) ----
 gamblock_ai_backend:
   name: "gamblock-ai-backend-staging"
   enabled: true
   image: "ghcr.io/gamblock-ai/gamblock-ai-backend:latest"
-  port: "{{ gamblock_ai_backend_staging_port }}"
+  port: "{{ gamblock_ai_backend_port }}"
   requires_database: true
   networks:
     - "{{ proxy_network }}"
@@ -21,7 +22,7 @@ gamblock_ai_website:
   name: "gamblock-ai-website-staging"
   enabled: true
   image: "ghcr.io/gamblock-ai/gamblock-ai-website:staging"
-  port: "{{ gamblock_ai_website_staging_port }}"
+  port: "{{ gamblock_ai_website_port }}"
   requires_database: false
   networks:
     - "{{ proxy_network }}"
@@ -29,7 +30,7 @@ gamblock_ai_website:
 
 # ---- Domains ----
 primary_domain: "staging.gamblock-ai.com"
-api_domain: "api.staging.gamblock-ai.com"
+api_domain: "api-staging.gamblock-ai.com"
 
 # ---- Database (separate database, same PostgreSQL container) ----
 gamblock_db_name: "gamblock_staging"

@@ -27,11 +27,18 @@
   loop_control:
     label: "{{ item.path }}"
 
+- name: Check for existing backend compose project
+  ansible.builtin.stat:
+    path: "{{ docker_stack_applications }}/{{ gamblock_ai_backend.name }}/docker-compose.yml"
+  register: existing_backend_compose
+
 - name: Stop backend before destructive fresh reset
   community.docker.docker_compose_v2:
     project_src: "{{ docker_stack_applications }}/{{ gamblock_ai_backend.name }}"
     state: stopped
-  when: fresh_reset_before_deploy | default(false) | bool
+  when:
+    - fresh_reset_before_deploy | default(false) | bool
+    - existing_backend_compose.stat.exists | bool
 
 - name: "Deploy Gamblock-AI backend"
   ansible.builtin.include_tasks: ../../common/tasks/deploy-golang-app.yml

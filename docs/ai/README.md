@@ -60,7 +60,7 @@ external contact still requires authorization.
 The topology is one root/password/port-22 VPS with a pinned SSH host key,
 Docker, one PostgreSQL 16 container, and Caddy-managed TLS serving two
 environments: production (`gamblock-ai.com` + `api.gamblock-ai.com`) and
-staging (`staging.gamblock-ai.com` + `api.staging.gamblock-ai.com`). Each
+staging (`staging.gamblock-ai.com` + `api-staging.gamblock-ai.com`). Each
 environment uses its own database (`gamblock` vs `gamblock_staging`), its own
 application containers and internal ports, and its own domains; Caddy routes
 all five hosts from one Caddyfile. Environment-specific variables live in
