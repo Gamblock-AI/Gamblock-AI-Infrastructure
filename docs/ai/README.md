@@ -3,7 +3,7 @@
 
 Jika ada pertentangan dengan `pkm_proposal.md`, proposal PKM adalah sumber mutlak.
 
-Context version: `2026-08-15.1`
+Context version: `2026-08-16.1`
 
 This repository is intentionally self-contained. A clone does not need a
 parent workspace to discover its product constraints, infrastructure workflow,
@@ -85,13 +85,15 @@ DeepSeek credentials through read-only provider endpoints, then reconciles
 Cloudflare DNS before Caddy certificate issuance, snapshots PostgreSQL, runs
 the environment's seeding plan, starts the applications, and waits for both
 public HTTPS endpoints. Seeding differs per environment: production runs
-`migrate-up` plus the four-account `demo-seeder` only (which fails closed when
+`migrate-up` plus the users-only `seed-accounts` binary (the four accounts
+with no education/Learning Hub/social/activity fixtures; fails closed when
 foreign accounts exist), while staging performs a fresh reset on every deploy
 (stop API → guarded `migrate-down`/`reset-storage` → `migrate-up` →
 `seeder` → `seed-learning-hub` → `demo-seeder`). Ansible and CI update
 backups older than 14 days are removed. `update.sh` remains non-destructive
 and environment-aware through the rendered `update.env`.
-Migrate-down, dynamic-storage reset, and the four-account demo seeder remain
+Migrate-down, dynamic-storage reset, the full demo seeder, and the users-only
+account seeder remain
 separately guarded manual tools and are never invoked by `update.sh`.
 
 Production-host evidence rechecked on 2026-08-11: the

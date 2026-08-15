@@ -75,6 +75,16 @@ services:
     networks:
       - {{ postgres_network }}
 
+  seed-accounts:
+    image: {{ gamblock_ai_backend.image }}
+    profiles: ["tools"]
+    entrypoint: ["/app/seed-accounts"]
+    env_file: .env
+    volumes:
+      - {{ gamblock_ai_backend.name }}_media:/app/var/media
+    networks:
+      - {{ postgres_network }}
+
 networks:
 {% for net in gamblock_ai_backend.networks %}
   {{ net }}:

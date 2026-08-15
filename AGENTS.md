@@ -5,7 +5,7 @@ This repository is self-contained and requires no external workspace context.
 `AGENTS.md` is the canonical instruction file; provider adapters and the
 context manifest are indexed in `docs/ai/README.md`.
 
-Context version: `2026-08-15.1`
+Context version: `2026-08-16.1`
 
 ## Product safety boundaries
 
@@ -95,26 +95,30 @@ api, staging, api-staging) from one Caddyfile.
 
 Seeding plans differ by environment:
 
-- Production runs `migrate-up` plus `demo-seeder` only: the four
-  owner-approved demo accounts and their activity fixtures. The demo seeder
-  fails closed when the database contains any account outside that fixture.
+- Production runs `migrate-up` plus `seed-accounts` only: the users-only
+  seeder installs the four owner-approved demo accounts and no education,
+  Learning Hub, social, activity, support, or operational fixtures, so
+  production holds exactly the accounts with no fixture content. It fails
+  closed when the database contains any account outside that fixture.
 - Staging is reset fresh on every deploy: the staging API is stopped,
   `migrate-down` and `reset-storage` run with their confirmation variables,
   then `migrate-up`, `seeder`, `seed-learning-hub`, and `demo-seeder` run —
-  every seeder available in the backend image. The staging backend uses
+  every seeder available in the backend image, including the full demo
+  accounts-and-fixtures seeder. The staging backend uses
   `APP_ENV=staging`, demo WhatsApp codes, and dev login; it never uses
   `ENABLE_DEMO_DATA` (it still persists to PostgreSQL).
 
 `update.sh` stays non-destructive and environment-aware: it sources the
 Ansible-rendered `update.env` (database name/user, container, seeding plan)
 and never performs a fresh reset. Guarded tools (`migrate-down`,
-`reset-storage`, `demo-seeder`) receive their exact confirmation variables
-from the rendered application `.env` and are never added outside the staging
-fresh-reset path.
+`reset-storage`, `demo-seeder`, `seed-accounts`) receive their exact
+confirmation variables from the rendered application `.env` and are never added
+outside the staging fresh-reset path.
 
 The backend Compose `tools` profile exposes owner-invoked
-`migrate-down`, `reset-storage`, `seeder`, `seed-learning-hub`, and
-`demo-seeder` services. They require exact confirmation variables at invocation
+`migrate-down`, `reset-storage`, `seeder`, `seed-learning-hub`,
+`demo-seeder`, and `seed-accounts` services. They require exact confirmation
+variables at invocation
 time. Only `migrate-up` and the environment's seeding plan run during normal
 deploys; `migrate-down`/`reset-storage` run only inside the staging
 fresh-reset path and are never added to `update.sh`.

@@ -3,7 +3,7 @@
 Ansible deployment for the Gamblock-AI backend, website, PostgreSQL, and Caddy
 on one Ubuntu VPS.
 
-AI workflow context version: `2026-08-15.1`. Start with [`AGENTS.md`](AGENTS.md)
+AI workflow context version: `2026-08-16.1`. Start with [`AGENTS.md`](AGENTS.md)
 and [`docs/ai/README.md`](docs/ai/README.md).
 
 ## Environment shape
@@ -124,13 +124,16 @@ selects the requested role for the selected environment.
 
 Seeding plans per environment:
 
-- **production** — `migrate-up` + `demo-seeder` only (the four demo accounts
-  and their activity fixtures). The demo seeder refuses any database that
+- **production** — `migrate-up` + `seed-accounts` only (the four demo accounts
+  with **no** fixture content). The users-only seeder refuses any database that
   contains accounts outside the approved fixture, so the deploy fails closed
-  once real student accounts exist.
+  once real student accounts exist, and it never seeds education, Learning Hub,
+  social, activity, support, or operational fixtures.
 - **staging** — fresh reset on every deploy: the staging API is stopped,
   `migrate-down` + `reset-storage` run with their confirmation variables,
-  then `migrate-up`, `seeder`, `seed-learning-hub`, and `demo-seeder` run.
+  then `migrate-up`, `seeder`, `seed-learning-hub`, and `demo-seeder` run
+  (every seeder available in the backend image, including the full
+  accounts-and-fixtures demo seeder).
   The staging backend uses `APP_ENV=staging` with demo WhatsApp codes and dev
   login while still persisting to PostgreSQL.
 
@@ -146,20 +149,27 @@ the matching `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (from the encrypted
 vault), and `VAPID_SUBJECT` for the opt-in daily Web Push reminder.
 
 An owner-approved manual demo reset on a running environment is performed only
-from the rendered backend application directory while the API is stopped:
+from the rendered backend application directory while the API is stopped. Use
+`demo-seeder` (accounts plus fixture content) for a full demo environment and
+`seed-accounts` (the four accounts only, no fixtures) for the production shape:
 
 ```sh
 docker compose stop <backend-container>
 docker compose --profile tools run --rm --no-deps -e CONFIRM_MIGRATE_DOWN=DROP_ALL_DATA migrate-down
 docker compose --profile tools run --rm --no-deps -e CONFIRM_RESET_STORAGE=DELETE_DYNAMIC_STORAGE reset-storage
 docker compose --profile tools run --rm --no-deps migrate-up
+# Full demo environment (staging shape):
 docker compose --profile tools run --rm --no-deps -e CONFIRM_DEMO_SEED=CREATE_FOUR_DEMO_ACCOUNTS demo-seeder
+# OR accounts-only (production shape):
+docker compose --profile tools run --rm --no-deps -e CONFIRM_SEED_ACCOUNTS=CREATE_FOUR_DEMO_ACCOUNTS seed-accounts
 docker compose up -d --no-deps <backend-container>
 ```
 
-Keep the API stopped if any one-shot service fails. The demo seeder accepts an
-empty database or the exact four known fixtures only; it rejects unrelated
-accounts and is never called by `make deploy` or `update.sh`.
+Keep the API stopped if any one-shot service fails. Both seeders accept an
+empty database or the exact four known fixtures only; they reject unrelated
+accounts, never seed education/Learning Hub/social/activity content through the
+automatic production path, and are never called by `make deploy` or
+`update.sh`.
 
 ## GitHub and Cloudflare helpers
 

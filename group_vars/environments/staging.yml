@@ -47,6 +47,10 @@ gamblock_backend_cors_origins:
   - "https://staging.gamblock-ai.com"
 
 # ---- Seeding plan (every seeder available in the backend image) ----
+# Staging is the full-fixture environment: it runs the baseline content seeder,
+# the Learning Hub seeder, and the demo seeder (accounts + activity fixtures).
+# Production, by contrast, runs only seed-accounts (the four accounts, no
+# fixture content).
 seed_plan:
   - seeder
   - seed-learning-hub

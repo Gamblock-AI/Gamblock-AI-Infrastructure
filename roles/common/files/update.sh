@@ -71,8 +71,8 @@ if docker compose -f "$COMPOSE_FILE" config --services | grep -qx 'migrate-up'; 
     || error_exit "database backup retention cleanup failed"
 
   # Run each one-shot service in the rendered seeding plan. The guarded
-  # services (migrate-down/reset-storage/demo-seeder) refuse to run without
-  # their exact confirmation variables from the application .env.
+  # services (migrate-down/reset-storage/demo-seeder/seed-accounts) refuse to
+  # run without their exact confirmation variables from the application .env.
   for SERVICE in $SEED_SERVICES; do
     log "Running prepare service: $SERVICE"
     docker compose -f "$COMPOSE_FILE" --profile tools run --rm --no-deps "$SERVICE" \

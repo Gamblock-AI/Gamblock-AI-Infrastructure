@@ -21,12 +21,13 @@ gamblock_backend_cors_origins:
   - "https://gamblock-ai.com"
 
 # ---- Seeding plan (one-shot services run after migrate-up) ----
-# Production installs only the four owner-approved demo accounts and their
-# activity fixtures. The demo seeder fails closed when the database contains
-# any account outside that fixture.
+# Production installs exactly the four owner-approved demo accounts and nothing
+# else: seed-accounts seeds no education, Learning Hub, social, activity,
+# support, or operational fixtures, so production holds only the accounts. It
+# fails closed when the database contains any account outside that fixture.
 seed_plan:
-  - demo-seeder
-demo_seed_confirm: "CREATE_FOUR_DEMO_ACCOUNTS"
+  - seed-accounts
+seed_accounts_confirm: "CREATE_FOUR_DEMO_ACCOUNTS"
 
 # ---- Destructive reset ----
 # Never enabled in production; deploy only migrates up and seeds.
