@@ -50,7 +50,7 @@
     dest: "{{ app_install_dir }}/update.env"
     content: |
       {% for key, value in (app_update_env | default({})).items() %}
-      {{ key }}={{ value }}
+      {{ key }}="{{ value }}"
       {% endfor %}
     mode: "0600"
     owner: root
