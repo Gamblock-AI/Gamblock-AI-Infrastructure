@@ -36,21 +36,23 @@ api_domain: "api-staging.gamblock-ai.com"
 gamblock_db_name: "gamblock_staging"
 
 # ---- Backend runtime ----
-# staging is intentionally NOT production: WhatsApp codes are demo previews
-# (no real messages), dev login is available, and fail-closed production
-# validation does not apply.
-gamblock_backend_app_env: "staging"
-gamblock_backend_notification_mode: "demo"
-gamblock_backend_enable_dev_login: true
+# Staging runtime behavior is identical to production: APP_ENV=production,
+# real Fonnte OTP/notification delivery, dev login disabled, and the same
+# fail-closed production validation. Only the database, domains, CORS origin,
+# and the seeding plan differ (staging keeps the full fixture set).
+gamblock_backend_app_env: "production"
+gamblock_backend_notification_mode: "production"
+gamblock_backend_enable_dev_login: false
 gamblock_backend_enable_demo_data: false
 gamblock_backend_cors_origins:
   - "https://staging.gamblock-ai.com"
 
 # ---- Seeding plan (every seeder available in the backend image) ----
-# Staging is the full-fixture environment: it runs the baseline content seeder,
-# the Learning Hub seeder, and the demo seeder (accounts + activity fixtures).
-# Production, by contrast, runs only seed-accounts (the four accounts, no
-# fixture content).
+# INTENTIONAL, NOT A BUG: staging keeps the four owner-approved demo accounts
+# PLUS the full fixture set (baseline content, Learning Hub, and demo activity)
+# so QA has realistic data. Production, by contrast, runs only seed-accounts
+# (the four accounts, no fixture content). Both environments share the same
+# production runtime behavior; only the data volume differs.
 seed_plan:
   - seeder
   - seed-learning-hub

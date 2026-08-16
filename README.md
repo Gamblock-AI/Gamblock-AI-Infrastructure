@@ -3,7 +3,7 @@
 Ansible deployment for the Gamblock-AI backend, website, PostgreSQL, and Caddy
 on one Ubuntu VPS.
 
-AI workflow context version: `2026-08-16.4`. Start with [`AGENTS.md`](AGENTS.md)
+AI workflow context version: `2026-08-16.5`. Start with [`AGENTS.md`](AGENTS.md)
 and [`docs/ai/README.md`](docs/ai/README.md).
 
 ## Environment shape
@@ -133,9 +133,16 @@ Seeding plans per environment:
   `migrate-down` + `reset-storage` run with their confirmation variables,
   then `migrate-up`, `seeder`, `seed-learning-hub`, and `demo-seeder` run
   (every seeder available in the backend image, including the full
-  accounts-and-fixtures demo seeder).
-  The staging backend uses `APP_ENV=staging` with demo WhatsApp codes and dev
-  login while still persisting to PostgreSQL.
+  accounts-and-fixtures demo seeder). Staging intentionally keeps the four demo
+  accounts plus the full fixture set for QA; this asymmetry vs production is by
+  design.
+
+Runtime behavior is identical between staging and production: both run
+`APP_ENV=production`, `NOTIFICATION_MODE=production` (real Fonnte
+OTP/WhatsApp, no demo preview codes), dev login disabled, and fail closed
+like production. Only the database (`gamblock` vs `gamblock_staging`),
+domains, CORS origin, and seeding data volume differ. A single `FONNTE_TOKEN`
+is shared, so staging and production use the same WhatsApp delivery device.
 
 The backend template keeps production development login/demo data disabled,
 mounts artifact, export, education-media, and avatar storage, and renders the

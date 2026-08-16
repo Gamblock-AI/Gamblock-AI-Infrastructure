@@ -5,7 +5,7 @@ This repository is self-contained and requires no external workspace context.
 `AGENTS.md` is the canonical instruction file; provider adapters and the
 context manifest are indexed in `docs/ai/README.md`.
 
-Context version: `2026-08-16.4`
+Context version: `2026-08-16.5`
 
 ## Product safety boundaries
 
@@ -104,9 +104,18 @@ Seeding plans differ by environment:
   `migrate-down` and `reset-storage` run with their confirmation variables,
   then `migrate-up`, `seeder`, `seed-learning-hub`, and `demo-seeder` run —
   every seeder available in the backend image, including the full demo
-  accounts-and-fixtures seeder. The staging backend uses
-  `APP_ENV=staging`, demo WhatsApp codes, and dev login; it never uses
-  `ENABLE_DEMO_DATA` (it still persists to PostgreSQL).
+  accounts-and-fixtures seeder. Staging intentionally keeps the four demo
+  accounts plus the full fixture set for QA; this asymmetry vs production is
+  by design.
+
+Runtime behavior is identical between staging and production: both run
+`APP_ENV=production`, `NOTIFICATION_MODE=production` (real Fonnte OTP/WhatsApp
+delivery, no demo preview codes), `ENABLE_DEV_LOGIN=false`, and
+`ENABLE_DEMO_DATA=false`, so staging fails closed like production. Only the
+database (`gamblock` vs `gamblock_staging`), domains, CORS origin, and seeding
+data volume differ. There is a single `FONNTE_TOKEN`, so staging and production
+share the same WhatsApp delivery device — a shared-delivery trait, not data
+overlap.
 
 `update.sh` stays non-destructive and environment-aware: it sources the
 Ansible-rendered `update.env` (database name/user, container, seeding plan)

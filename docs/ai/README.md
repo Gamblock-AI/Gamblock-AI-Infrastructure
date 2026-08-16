@@ -3,7 +3,7 @@
 
 Jika ada pertentangan dengan `pkm_proposal.md`, proposal PKM adalah sumber mutlak.
 
-Context version: `2026-08-16.4`
+Context version: `2026-08-16.5`
 
 This repository is intentionally self-contained. A clone does not need a
 parent workspace to discover its product constraints, infrastructure workflow,
@@ -80,6 +80,37 @@ public Android/Windows trust-store entry without printing either value. Public
 Next.js variables are build-time image inputs and are not secret runtime
 Ansible substitutions; the staging website image (`:staging`) is built by
 website CI with the staging public URLs.
+
+### Environment contract (staging vs production)
+
+Staging runtime behavior is intentionally identical to production. Do not
+re-introduce a `demo`/dev-only divergence without an explicit owner decision.
+
+| Aspect | Production | Staging |
+|---|---|---|
+| `APP_ENV` | `production` | `production` (same fail-closed validation, strict CORS, no dev login) |
+| `NOTIFICATION_MODE` | `production` | `production` (real Fonnte OTP/WhatsApp delivery; no demo preview codes) |
+| `ENABLE_DEV_LOGIN` | `false` | `false` |
+| `ENABLE_DEMO_DATA` | `false` | `false` |
+| Database | `gamblock` | `gamblock_staging` |
+| Domains / CORS / web base URL | `gamblock-ai.com` | `staging.gamblock-ai.com` |
+| Seeding plan | `seed-accounts` only (four accounts, **no** fixture content) | `seeder` + `seed-learning-hub` + `demo-seeder` (**four accounts + full fixture set** — intentional) |
+| Destructive reset | `fresh_reset_before_deploy: false` | `fresh_reset_before_deploy: true` (staging DB is rebuilt each deploy) |
+
+Key implications:
+
+- OTP and all Fonnte notifications are sent for real in both environments.
+  There is a single `FONNTE_TOKEN` in the vault, so staging and production
+  share the same WhatsApp device; this is a shared-delivery trait, not a data
+  overlap.
+- Production contains exactly the four owner-approved demo accounts and nothing
+  else. Staging keeps the four demo accounts plus all fixture content
+  (education, Learning Hub, activity, support, operational rows) so QA has
+  realistic data. This asymmetry is by design and must not be "fixed".
+- Both environments fail closed like production for configuration, database,
+  and CORS because staging also runs `APP_ENV=production`.
+
+
 
 The complete `make deploy` path first validates GHCR, Cloudflare, Fonnte, and
 DeepSeek credentials through read-only provider endpoints, then reconciles
