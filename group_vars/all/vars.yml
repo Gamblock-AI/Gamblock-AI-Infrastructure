@@ -103,12 +103,13 @@ github_repos:
   - "Gamblock-AI-Website"
   - "Gamblock-AI-Apps"
 
-# Production bootstrap is complete. GitHub-hosted runners cannot reliably
-# reach the password-authenticated SSH endpoint, so application deployment is
-# performed through the authorized local `make deploy` path.
-github_enable_vps_deploy: "false"
+# CI deploy is enabled: pushing to main triggers the backend/website workflows
+# to pull the new image and run the environment-aware update.sh on both
+# production and staging. GitHub-hosted runners use the pinned root/password
+# SSH contract and the pinned host identity.
+github_enable_vps_deploy: "true"
 github_enable_production_release: "true"
-github_enable_windows_pilot_release: "false"
+github_enable_windows_pilot_release: "true"
 
 # ---- Flutter public environment configuration ----
 flutter_development_api_url: "https://thankful-midge-noble.ngrok-free.app"

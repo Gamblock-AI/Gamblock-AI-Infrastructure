@@ -3,7 +3,7 @@
 Ansible deployment for the Gamblock-AI backend, website, PostgreSQL, and Caddy
 on one Ubuntu VPS.
 
-AI workflow context version: `2026-08-16.3`. Start with [`AGENTS.md`](AGENTS.md)
+AI workflow context version: `2026-08-16.4`. Start with [`AGENTS.md`](AGENTS.md)
 and [`docs/ai/README.md`](docs/ai/README.md).
 
 ## Environment shape
@@ -185,10 +185,11 @@ pinned SSH fingerprint, public URLs, and enable/disable gates are Actions
 variables. The Flutter repository additionally receives only the public
 protection-grant trust store; Android/Windows signing material is provisioned
 separately through protected release environments and is never read from the
-deployment vault. The current bootstrapped production environment deliberately keeps
-`ENABLE_VPS_DEPLOY=false`: GitHub-hosted runners cannot reliably reach the
-password-authenticated SSH endpoint. Use the authorized local `make deploy`
-path for production changes. Cloudflare dry-run is local-only and does not
+deployment vault. CI auto-deploy is enabled (`ENABLE_VPS_DEPLOY=true`): a push
+to `main` on the backend or website repository pulls the new image and runs the
+environment-aware, non-destructive `update.sh` for both production and staging.
+The authorized local `make deploy` path remains available for full deploys.
+Cloudflare dry-run is local-only and does not
 require or contact the API.
 
 All classification remains on-device. This stack must never receive or log raw

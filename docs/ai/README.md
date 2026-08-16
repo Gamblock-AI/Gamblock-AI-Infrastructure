@@ -3,7 +3,7 @@
 
 Jika ada pertentangan dengan `pkm_proposal.md`, proposal PKM adalah sumber mutlak.
 
-Context version: `2026-08-16.3`
+Context version: `2026-08-16.4`
 
 This repository is intentionally self-contained. A clone does not need a
 parent workspace to discover its product constraints, infrastructure workflow,
@@ -66,9 +66,10 @@ application containers and internal ports, and its own domains; Caddy routes
 all five hosts from one Caddyfile. Environment-specific variables live in
 `group_vars/environments/{production,staging}.yml`, loaded through the
 `environment` extra var (`make deploy ENV=staging`). GitHub deploy workflows
-retain the pinned-host identity contract but are disabled by default because
-hosted runners cannot reliably reach the password-authenticated SSH endpoint;
-the authorized local `make deploy` path is canonical. The backend deployment
+retain the pinned-host identity contract and are enabled: a push to `main` on
+the backend or website repository pulls the new image and runs the
+environment-aware, non-destructive `update.sh` for both production and staging.
+The authorized local `make deploy` path remains canonical for full deploys. The backend deployment
 template keeps production on `APP_ENV=production` with dev login/demo data
 disabled, mounts artifact/export/media/avatar storage, and provides the
 production values required by backend fail-closed configuration validation.
