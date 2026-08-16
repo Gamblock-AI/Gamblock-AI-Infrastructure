@@ -60,9 +60,10 @@ seed_plan:
 demo_seed_confirm: "CREATE_FOUR_DEMO_ACCOUNTS"
 
 # ---- Destructive reset ----
-# Staging starts from a fresh, fully seeded demo database on every deploy:
-# the API is stopped, the schema is dropped, storage is reset, migrations are
-# re-applied, and the complete seeding plan runs.
-fresh_reset_before_deploy: true
+# Staging is NOT reset on deploy: it behaves like production and keeps its
+# data between deploys (matching the runtime parity contract). Destructive
+# reset remains available only as an owner-invoked manual tool through the
+# guarded compose services, never as part of deploy.
+fresh_reset_before_deploy: false
 migrate_down_confirm: "DROP_ALL_DATA"
 reset_storage_confirm: "DELETE_DYNAMIC_STORAGE"

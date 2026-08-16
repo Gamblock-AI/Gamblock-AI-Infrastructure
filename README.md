@@ -3,7 +3,7 @@
 Ansible deployment for the Gamblock-AI backend, website, PostgreSQL, and Caddy
 on one Ubuntu VPS.
 
-AI workflow context version: `2026-08-16.5`. Start with [`AGENTS.md`](AGENTS.md)
+AI workflow context version: `2026-08-16.6`. Start with [`AGENTS.md`](AGENTS.md)
 and [`docs/ai/README.md`](docs/ai/README.md).
 
 ## Environment shape
@@ -129,13 +129,12 @@ Seeding plans per environment:
   contains accounts outside the approved fixture, so the deploy fails closed
   once real student accounts exist, and it never seeds education, Learning Hub,
   social, activity, support, or operational fixtures.
-- **staging** — fresh reset on every deploy: the staging API is stopped,
-  `migrate-down` + `reset-storage` run with their confirmation variables,
-  then `migrate-up`, `seeder`, `seed-learning-hub`, and `demo-seeder` run
-  (every seeder available in the backend image, including the full
-  accounts-and-fixtures demo seeder). Staging intentionally keeps the four demo
-  accounts plus the full fixture set for QA; this asymmetry vs production is by
-  design.
+- **staging** — `migrate-up`, `seeder`, `seed-learning-hub`, and `demo-seeder`
+  run on every deploy (all seeders available in the backend image, including the
+  full accounts-and-fixtures demo seeder), but staging is **not** reset:
+  `fresh_reset_before_deploy` is `false`, so staging keeps its data between
+  deploys like production. Staging intentionally keeps the four demo accounts
+  plus the full fixture set for QA; this asymmetry vs production is by design.
 
 Runtime behavior is identical between staging and production: both run
 `APP_ENV=production`, `NOTIFICATION_MODE=production` (real Fonnte

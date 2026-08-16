@@ -3,7 +3,7 @@
 
 Jika ada pertentangan dengan `pkm_proposal.md`, proposal PKM adalah sumber mutlak.
 
-Context version: `2026-08-16.5`
+Context version: `2026-08-16.6`
 
 This repository is intentionally self-contained. A clone does not need a
 parent workspace to discover its product constraints, infrastructure workflow,
@@ -95,7 +95,7 @@ re-introduce a `demo`/dev-only divergence without an explicit owner decision.
 | Database | `gamblock` | `gamblock_staging` |
 | Domains / CORS / web base URL | `gamblock-ai.com` | `staging.gamblock-ai.com` |
 | Seeding plan | `seed-accounts` only (four accounts, **no** fixture content) | `seeder` + `seed-learning-hub` + `demo-seeder` (**four accounts + full fixture set** — intentional) |
-| Destructive reset | `fresh_reset_before_deploy: false` | `fresh_reset_before_deploy: true` (staging DB is rebuilt each deploy) |
+| Destructive reset | `fresh_reset_before_deploy: false` | `fresh_reset_before_deploy: false` (staging is NOT reset; data persists between deploys like production) |
 
 Key implications:
 
@@ -109,6 +109,9 @@ Key implications:
   realistic data. This asymmetry is by design and must not be "fixed".
 - Both environments fail closed like production for configuration, database,
   and CORS because staging also runs `APP_ENV=production`.
+- Neither environment is reset on deploy. `fresh_reset_before_deploy` is
+  `false` for both; `migrate-down`/`reset-storage` remain owner-invoked manual
+  tools only.
 
 
 
@@ -119,9 +122,10 @@ the environment's seeding plan, starts the applications, and waits for both
 public HTTPS endpoints. Seeding differs per environment: production runs
 `migrate-up` plus the users-only `seed-accounts` binary (the four accounts
 with no education/Learning Hub/social/activity fixtures; fails closed when
-foreign accounts exist), while staging performs a fresh reset on every deploy
-(stop API → guarded `migrate-down`/`reset-storage` → `migrate-up` →
-`seeder` → `seed-learning-hub` → `demo-seeder`). Ansible and CI update
+foreign accounts exist), while staging runs `migrate-up` → `seeder` →
+`seed-learning-hub` → `demo-seeder` (all seeders). Neither environment is reset
+on deploy; `migrate-down`/`reset-storage` are owner-invoked manual tools only.
+Ansible and CI update
 backups older than 14 days are removed. `update.sh` remains non-destructive
 and environment-aware through the rendered `update.env`.
 Migrate-down, dynamic-storage reset, the full demo seeder, and the users-only

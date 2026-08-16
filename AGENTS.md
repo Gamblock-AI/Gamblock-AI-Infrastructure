@@ -5,7 +5,7 @@ This repository is self-contained and requires no external workspace context.
 `AGENTS.md` is the canonical instruction file; provider adapters and the
 context manifest are indexed in `docs/ai/README.md`.
 
-Context version: `2026-08-16.5`
+Context version: `2026-08-16.6`
 
 ## Product safety boundaries
 
@@ -100,13 +100,12 @@ Seeding plans differ by environment:
   Learning Hub, social, activity, support, or operational fixtures, so
   production holds exactly the accounts with no fixture content. It fails
   closed when the database contains any account outside that fixture.
-- Staging is reset fresh on every deploy: the staging API is stopped,
-  `migrate-down` and `reset-storage` run with their confirmation variables,
-  then `migrate-up`, `seeder`, `seed-learning-hub`, and `demo-seeder` run —
-  every seeder available in the backend image, including the full demo
-  accounts-and-fixtures seeder. Staging intentionally keeps the four demo
-  accounts plus the full fixture set for QA; this asymmetry vs production is
-  by design.
+- Staging runs `migrate-up`, `seeder`, `seed-learning-hub`, and `demo-seeder`
+  on every deploy (all seeders available in the backend image, including the
+  full accounts-and-fixtures seeder) but is NOT reset: `fresh_reset_before_deploy`
+  is `false`, so staging keeps its data between deploys just like production.
+  Staging intentionally keeps the four demo accounts plus the full fixture set
+  for QA; this asymmetry vs production is by design.
 
 Runtime behavior is identical between staging and production: both run
 `APP_ENV=production`, `NOTIFICATION_MODE=production` (real Fonnte OTP/WhatsApp
@@ -122,15 +121,15 @@ Ansible-rendered `update.env` (database name/user, container, seeding plan)
 and never performs a fresh reset. Guarded tools (`migrate-down`,
 `reset-storage`, `demo-seeder`, `seed-accounts`) receive their exact
 confirmation variables from the rendered application `.env` and are never added
-outside the staging fresh-reset path.
+to the automatic deploy path.
 
 The backend Compose `tools` profile exposes owner-invoked
 `migrate-down`, `reset-storage`, `seeder`, `seed-learning-hub`,
 `demo-seeder`, and `seed-accounts` services. They require exact confirmation
 variables at invocation
 time. Only `migrate-up` and the environment's seeding plan run during normal
-deploys; `migrate-down`/`reset-storage` run only inside the staging
-fresh-reset path and are never added to `update.sh`.
+deploys; `migrate-down`/`reset-storage` are owner-invoked manual tools only and
+are never added to `update.sh`.
 
 `make credential-check` opens the encrypted vault in memory and prints only
 field-level status; it still requires explicit vault-access authorization.
