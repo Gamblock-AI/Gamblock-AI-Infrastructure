@@ -5,7 +5,7 @@ This repository is self-contained and requires no external workspace context.
 `AGENTS.md` is the canonical instruction file; provider adapters and the
 context manifest are indexed in `docs/ai/README.md`.
 
-Context version: `2026-08-16.6`
+Context version: `2026-08-28.1`
 
 ## Product safety boundaries
 
@@ -52,13 +52,21 @@ playbooks/
   server-setup.yml       # main provisioning playbook (environment extra var)
 roles/
   common/                # shared deploy tasks and update.sh
-  system/                # base host configuration
+  system/                # base host configuration and scheduled backups
   infrastructure/        # Docker and Caddy setup
   databases/             # PostgreSQL setup (one container, two databases)
   applications/          # backend and website deployments
 scripts/                 # GitHub and Cloudflare helper scripts
 docs/ai/                 # versioned AI-context index and manifest
 ```
+
+The scheduled backup role (`roles/system/backup-setup`) runs every night and
+archives both PostgreSQL databases (production `gamblock` and staging
+`gamblock_staging`) plus the dynamic file volumes of every backend container
+(education media, exports, artifacts, avatars) into
+`{{ docker_stack_base }}/backups`, pruned by the same 14-day retention used by
+the event-driven backups. Event-driven dumps still run before each backend
+deploy and each CI `update.sh`.
 
 ## Commands and authorization boundary
 
@@ -98,8 +106,12 @@ Seeding plans differ by environment:
 - Production runs `migrate-up` plus `seed-accounts` only: the users-only
   seeder installs the four owner-approved demo accounts and no education,
   Learning Hub, social, activity, support, or operational fixtures, so
-  production holds exactly the accounts with no fixture content. It fails
-  closed when the database contains any account outside that fixture.
+  production holds exactly the accounts with no fixture content. Production
+  seeding is gated on an empty database (`seed_only_when_empty: true`): once
+  any account exists, the automatic seed plan is skipped and the populated
+  database is left exactly as-is on deploy. The seeder still fails closed when
+  invoked manually against a database containing an account outside the
+  fixture.
 - Staging runs `migrate-up`, `seeder`, `seed-learning-hub`, and `demo-seeder`
   on every deploy (all seeders available in the backend image, including the
   full accounts-and-fixtures seeder) but is NOT reset: `fresh_reset_before_deploy`
@@ -121,7 +133,10 @@ Ansible-rendered `update.env` (database name/user, container, seeding plan)
 and never performs a fresh reset. Guarded tools (`migrate-down`,
 `reset-storage`, `demo-seeder`, `seed-accounts`) receive their exact
 confirmation variables from the rendered application `.env` and are never added
-to the automatic deploy path.
+to the automatic deploy path. `update.sh` additionally skips the account
+seeders (`seed-accounts`/`demo-seeder`) at runtime when the users table already
+contains accounts, so a late CI update never fails closed against a populated
+database.
 
 The backend Compose `tools` profile exposes owner-invoked
 `migrate-down`, `reset-storage`, `seeder`, `seed-learning-hub`,

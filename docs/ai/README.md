@@ -3,7 +3,7 @@
 
 Jika ada pertentangan dengan `pkm_proposal.md`, proposal PKM adalah sumber mutlak.
 
-Context version: `2026-08-16.6`
+Context version: `2026-08-28.1`
 
 This repository is intentionally self-contained. A clone does not need a
 parent workspace to discover its product constraints, infrastructure workflow,
@@ -94,7 +94,7 @@ re-introduce a `demo`/dev-only divergence without an explicit owner decision.
 | `ENABLE_DEMO_DATA` | `false` | `false` |
 | Database | `gamblock` | `gamblock_staging` |
 | Domains / CORS / web base URL | `gamblock-ai.com` | `staging.gamblock-ai.com` |
-| Seeding plan | `seed-accounts` only (four accounts, **no** fixture content) | `seeder` + `seed-learning-hub` + `demo-seeder` (**four accounts + full fixture set** — intentional) |
+| Seeding plan | `seed-accounts` only, gated on an empty database (`seed_only_when_empty: true`) — four accounts, **no** fixture content | `seeder` + `seed-learning-hub` + `demo-seeder` (**four accounts + full fixture set** — intentional) |
 | Destructive reset | `fresh_reset_before_deploy: false` | `fresh_reset_before_deploy: false` (staging is NOT reset; data persists between deploys like production) |
 
 Key implications:
@@ -104,7 +104,9 @@ Key implications:
   share the same WhatsApp device; this is a shared-delivery trait, not a data
   overlap.
 - Production contains exactly the four owner-approved demo accounts and nothing
-  else. Staging keeps the four demo accounts plus all fixture content
+  else when it is seeded fresh. Once any account exists, the automatic seed plan
+  is skipped and the populated database is left unchanged on deploy. Staging
+  keeps the four demo accounts plus all fixture content
   (education, Learning Hub, activity, support, operational rows) so QA has
   realistic data. This asymmetry is by design and must not be "fixed".
 - Both environments fail closed like production for configuration, database,
@@ -121,13 +123,22 @@ Cloudflare DNS before Caddy certificate issuance, snapshots PostgreSQL, runs
 the environment's seeding plan, starts the applications, and waits for both
 public HTTPS endpoints. Seeding differs per environment: production runs
 `migrate-up` plus the users-only `seed-accounts` binary (the four accounts
-with no education/Learning Hub/social/activity fixtures; fails closed when
-foreign accounts exist), while staging runs `migrate-up` → `seeder` →
+with no education/Learning Hub/social/activity fixtures), but the account seed
+plan is gated on an empty users table — a populated production database is
+left exactly as-is on deploy and the seeder only runs against an empty or
+fresh-reset database. Staging runs `migrate-up` → `seeder` →
 `seed-learning-hub` → `demo-seeder` (all seeders). Neither environment is reset
 on deploy; `migrate-down`/`reset-storage` are owner-invoked manual tools only.
 Ansible and CI update
-backups older than 14 days are removed. `update.sh` remains non-destructive
-and environment-aware through the rendered `update.env`.
+backups older than 14 days are removed. A nightly scheduled backup
+(`roles/system/backup-setup`) archives both PostgreSQL databases (production
+`gamblock` and staging `gamblock_staging`) plus the dynamic file volumes of
+every backend container (education media, exports, artifacts, avatars) into
+`{{ docker_stack_base }}/backups`, pruned by the same 14-day retention.
+`update.sh` remains non-destructive
+and environment-aware through the rendered `update.env`, and when the
+environment is seed-only-when-empty it skips `seed-accounts`/`demo-seeder` at
+runtime if the database already contains user accounts.
 Migrate-down, dynamic-storage reset, the full demo seeder, and the users-only
 account seeder remain
 separately guarded manual tools and are never invoked by `update.sh`.

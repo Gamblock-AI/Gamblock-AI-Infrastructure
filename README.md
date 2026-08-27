@@ -3,7 +3,7 @@
 Ansible deployment for the Gamblock-AI backend, website, PostgreSQL, and Caddy
 on one Ubuntu VPS.
 
-AI workflow context version: `2026-08-16.6`. Start with [`AGENTS.md`](AGENTS.md)
+AI workflow context version: `2026-08-28.1`. Start with [`AGENTS.md`](AGENTS.md)
 and [`docs/ai/README.md`](docs/ai/README.md).
 
 ## Environment shape
@@ -125,10 +125,13 @@ selects the requested role for the selected environment.
 Seeding plans per environment:
 
 - **production** — `migrate-up` + `seed-accounts` only (the four demo accounts
-  with **no** fixture content). The users-only seeder refuses any database that
-  contains accounts outside the approved fixture, so the deploy fails closed
-  once real student accounts exist, and it never seeds education, Learning Hub,
-  social, activity, support, or operational fixtures.
+  with **no** fixture content), gated on an empty database
+  (`seed_only_when_empty: true`). Once any account exists the automatic seed
+  plan is skipped and the populated database is left exactly as-is on deploy.
+  The users-only seeder still fails closed when invoked manually against a
+  database that contains accounts outside the approved fixture, and it never
+  seeds education, Learning Hub, social, activity, support, or operational
+  fixtures.
 - **staging** — `migrate-up`, `seeder`, `seed-learning-hub`, and `demo-seeder`
   run on every deploy (all seeders available in the backend image, including the
   full accounts-and-fixtures demo seeder), but staging is **not** reset:
@@ -147,8 +150,12 @@ The backend template keeps production development login/demo data disabled,
 mounts artifact, export, education-media, and avatar storage, and renders the
 guarded confirmation variables for the one-shot tools. `update.sh` sources the
 Ansible-rendered `update.env` (database name/user, container, seeding plan),
-stays non-destructive, and never performs a fresh reset. Pre-deploy and update
-backups are retained for 14 days. The website's public API, app URL, and VAPID
+stays non-destructive, and never performs a fresh reset. Pre-deploy, pre-update,
+and nightly scheduled backups are retained for 14 days. The nightly scheduled
+backup (`roles/system/backup-setup`) archives both PostgreSQL databases and the
+dynamic file volumes (education media, exports, artifacts, avatars) of every
+backend container into `{{ docker_stack_base }}/backups`. The website's public
+API, app URL, and VAPID
 public key are Docker build-time GitHub variables; the staging website image is
 built by website CI with the staging variables. The backend template renders
 the matching `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (from the encrypted
@@ -174,8 +181,9 @@ docker compose up -d --no-deps <backend-container>
 Keep the API stopped if any one-shot service fails. Both seeders accept an
 empty database or the exact four known fixtures only; they reject unrelated
 accounts, never seed education/Learning Hub/social/activity content through the
-automatic production path, and are never called by `make deploy` or
-`update.sh`.
+automatic production path, and run automatically only against an empty database
+(an empty database or the fresh-reset path) — otherwise `make deploy` and
+`update.sh` skip them and leave the populated database exactly as-is.
 
 ## GitHub and Cloudflare helpers
 
