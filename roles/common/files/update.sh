@@ -24,6 +24,7 @@ DB_NAME="${DB_NAME:-gamblock}"
 POSTGRES_CONTAINER_NAME="${POSTGRES_CONTAINER_NAME:-postgres-db}"
 POSTGRES_BACKUP_RETENTION_DAYS="${POSTGRES_BACKUP_RETENTION_DAYS:-14}"
 SEED_SERVICES="${SEED_SERVICES:-}"
+SEED_ONLY_WHEN_EMPTY="${SEED_ONLY_WHEN_EMPTY:-false}"
 
 case "$POSTGRES_BACKUP_RETENTION_DAYS" in
   ""|*[!0-9]*)
@@ -74,6 +75,28 @@ if docker compose -f "$COMPOSE_FILE" config --services | grep -qx 'migrate-up'; 
   # services (migrate-down/reset-storage/demo-seeder/seed-accounts) refuse to
   # run without their exact confirmation variables from the application .env.
   for SERVICE in $SEED_SERVICES; do
+    case "$SERVICE:$SEED_ONLY_WHEN_EMPTY" in
+      seed-accounts:true|demo-seeder:true)
+        # Account seeders only ever install the four demo fixtures on an empty
+        # database. Once any account exists they fail closed, so when the
+        # environment is configured seed-only-when-empty, skip them at runtime
+        # when the DB is already populated (matches the deploy gate).
+        USERS_COUNT=$(docker exec "$POSTGRES_CONTAINER_NAME" psql \
+          --username="$DB_USER" --dbname="$DB_NAME" --tuples-only --no-align \
+          --command="SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='users'" 2>/dev/null || echo 0)
+        if [ "${USERS_COUNT:-0}" = "1" ]; then
+          USERS_TOTAL=$(docker exec "$POSTGRES_CONTAINER_NAME" psql \
+            --username="$DB_USER" --dbname="$DB_NAME" --tuples-only --no-align \
+            --command="SELECT count(*) FROM users" 2>/dev/null || echo 0)
+        else
+          USERS_TOTAL=0
+        fi
+        if [ "${USERS_TOTAL:-0}" -gt 0 ]; then
+          log "Skipping $SERVICE: database already contains user accounts"
+          continue
+        fi
+        ;;
+    esac
     log "Running prepare service: $SERVICE"
     docker compose -f "$COMPOSE_FILE" --profile tools run --rm --no-deps "$SERVICE" \
       || error_exit "prepare service $SERVICE failed"

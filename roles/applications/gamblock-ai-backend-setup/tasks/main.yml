@@ -27,6 +27,44 @@
   loop_control:
     label: "{{ item.path }}"
 
+- name: Check whether the backend users table exists
+  community.docker.docker_container_exec:
+    container: "{{ postgres_container_name }}"
+    argv:
+      - psql
+      - --username={{ gamblock_db_username }}
+      - --dbname={{ gamblock_db_name }}
+      - --tuples-only
+      - --no-align
+      - --command=SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='users'
+  register: backend_users_table_check
+  changed_when: false
+  when: seed_only_when_empty | default(false) | bool
+
+- name: Count existing backend user accounts
+  community.docker.docker_container_exec:
+    container: "{{ postgres_container_name }}"
+    argv:
+      - psql
+      - --username={{ gamblock_db_username }}
+      - --dbname={{ gamblock_db_name }}
+      - --tuples-only
+      - --no-align
+      - --command=SELECT count(*) FROM users
+  register: backend_users_count_check
+  changed_when: false
+  when:
+    - seed_only_when_empty | default(false) | bool
+    - backend_users_table_check.stdout | trim == '1'
+
+- name: Determine whether seeding must run on this deploy
+  ansible.builtin.set_fact:
+    gamblock_backend_seed_required: >-
+      {{ (fresh_reset_before_deploy | default(false) | bool)
+         or (not (seed_only_when_empty | default(false) | bool))
+         or (backend_users_table_check.stdout | default('0') | trim == '0')
+         or (backend_users_count_check.stdout | default('0') | trim | int == 0) }}
+
 - name: Check for existing backend compose project
   ansible.builtin.stat:
     path: "{{ docker_stack_applications }}/{{ gamblock_ai_backend.name }}/docker-compose.yml"
@@ -48,10 +86,14 @@
     app_port: "{{ gamblock_ai_backend.port }}"
     app_prepare_profiles:
       - tools
-    app_prepare_services: "{{ (['migrate-down', 'reset-storage'] if (fresh_reset_before_deploy | default(false) | bool) else []) + ['migrate-up'] + (seed_plan | default([])) }}"
+    app_prepare_services: >-
+      {{ (['migrate-down', 'reset-storage'] if (fresh_reset_before_deploy | default(false) | bool) else [])
+         + ['migrate-up']
+         + ((seed_plan | default([])) if (gamblock_backend_seed_required | default(true) | bool) else []) }}
     app_update_env:
       DB_USER: "{{ gamblock_db_username }}"
       DB_NAME: "{{ gamblock_db_name }}"
       POSTGRES_CONTAINER_NAME: "{{ postgres_container_name }}"
       POSTGRES_BACKUP_RETENTION_DAYS: "{{ postgres_backup_retention_days }}"
-      SEED_SERVICES: "{{ (['migrate-up'] + (seed_plan | default([]))) | join(' ') }}"
+      SEED_SERVICES: "{{ (['migrate-up'] + ((seed_plan | default([])) if (gamblock_backend_seed_required | default(true) | bool) else [])) | join(' ') }}"
+      SEED_ONLY_WHEN_EMPTY: "{{ 'true' if (seed_only_when_empty | default(false) | bool) else 'false' }}"

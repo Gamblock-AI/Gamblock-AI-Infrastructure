@@ -29,6 +29,10 @@ seed_plan:
   - seed-accounts
 seed_accounts_confirm: "CREATE_FOUR_DEMO_ACCOUNTS"
 
+# Seeding only ever runs against an empty database. A populated production
+# database is left exactly as it is on deploy.
+seed_only_when_empty: true
+
 # ---- Destructive reset ----
 # Never enabled in production; deploy only migrates up and seeds.
 fresh_reset_before_deploy: false

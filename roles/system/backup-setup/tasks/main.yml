@@ -1,0 +1,38 @@
+---
+# Scheduled backup for the shared postgres databases and the dynamic file
+# volumes of every backend container.
+- name: Create scheduled backup root
+  ansible.builtin.file:
+    path: "{{ backup_root }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Render backup configuration
+  ansible.builtin.template:
+    src: backup.env.j2
+    dest: "{{ backup_root }}/backup.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Install scheduled backup script
+  ansible.builtin.copy:
+    src: backup.sh
+    dest: "{{ backup_root }}/backup.sh"
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Schedule nightly backup
+  ansible.builtin.cron:
+    name: "gamblock-ai scheduled backup"
+    minute: "{{ backup_cron_minute }}"
+    hour: "{{ backup_cron_hour }}"
+    day: "{{ backup_cron_day }}"
+    month: "{{ backup_cron_month }}"
+    weekday: "{{ backup_cron_dow }}"
+    job: "{{ backup_root }}/backup.sh"
+    user: root

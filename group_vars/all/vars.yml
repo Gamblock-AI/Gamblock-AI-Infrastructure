@@ -93,6 +93,7 @@ enable_postgres: true
 enable_gamblock_ai_backend: true
 enable_gamblock_ai_website: true
 enable_caddy: true
+enable_backup: true
 
 # ---- GitHub (org repos for CI secrets/variables) ----
 github_owner: "Gamblock-AI"

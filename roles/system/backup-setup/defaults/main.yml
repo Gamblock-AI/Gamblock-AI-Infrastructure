@@ -1,0 +1,16 @@
+---
+# Defaults for the scheduled backup role. Values can be overridden per
+# environment. No secrets live here.
+backup_root: "{{ docker_stack_base }}/backups"
+backup_db_names:
+  - "{{ postgres_default_db_name }}"
+  - "{{ staging_db_name }}"
+backup_backend_containers:
+  - "{{ gamblock_ai_backend_container }}"
+  - "{{ gamblock_ai_backend_staging_container }}"
+backup_retention_days: "{{ postgres_backup_retention_days }}"
+backup_cron_minute: "0"
+backup_cron_hour: "3"
+backup_cron_day: "*"
+backup_cron_month: "*"
+backup_cron_dow: "*"
