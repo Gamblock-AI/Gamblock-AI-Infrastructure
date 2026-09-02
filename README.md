@@ -3,7 +3,7 @@
 Ansible deployment for the Gamblock-AI backend, website, PostgreSQL, and Caddy
 on one Ubuntu VPS.
 
-AI workflow context version: `2026-09-02.5`. Start with [`AGENTS.md`](AGENTS.md)
+AI workflow context version: `2026-09-03.1`. Start with [`AGENTS.md`](AGENTS.md)
 and [`docs/ai/README.md`](docs/ai/README.md).
 
 ## Environment shape
