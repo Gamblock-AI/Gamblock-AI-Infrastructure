@@ -3,7 +3,7 @@
 
 Jika ada pertentangan dengan `pkm_proposal.md`, proposal PKM adalah sumber mutlak.
 
-Context version: `2026-08-31.2`
+Context version: `2026-09-02.1`
 
 This repository is intentionally self-contained. A clone does not need a
 parent workspace to discover its product constraints, infrastructure workflow,
@@ -153,3 +153,10 @@ IPv6 first while Next.js listens on IPv4. The image and Compose templates now
 use the explicit IPv4 loopback address. DNS reconciliation and public health
 verification are part of the authorized `make deploy` operation. SMTP remains
 optional; the production Fonnte adapter is required.
+
+## Cross-repository testing
+
+Runtime and cross-repository evaluation evidence is owned by the public
+[Gamblock-AI-Testing repository](https://github.com/Gamblock-AI/Gamblock-AI-Testing).
+Infrastructure documentation does not duplicate test results or contain device
+evidence.
