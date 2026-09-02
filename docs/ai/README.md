@@ -3,7 +3,7 @@
 
 Jika ada pertentangan dengan `pkm_proposal.md`, proposal PKM adalah sumber mutlak.
 
-Context version: `2026-09-02.3`
+Context version: `2026-09-02.4`
 
 This repository is intentionally self-contained. A clone does not need a
 parent workspace to discover its product constraints, infrastructure workflow,
@@ -159,4 +159,6 @@ optional; the production Fonnte adapter is required.
 Runtime and cross-repository evaluation evidence is owned by the public
 [Gamblock-AI-Testing repository](https://github.com/Gamblock-AI/Gamblock-AI-Testing).
 Infrastructure documentation does not duplicate test results or contain device
-evidence.
+evidence. Infrastructure is not currently a runner/report target; do not
+invent a testing report. If the scope is explicitly expanded, use the shared
+test receipt to identify public and private/local data changes.

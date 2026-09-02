@@ -5,7 +5,7 @@ This repository is self-contained and requires no external workspace context.
 `AGENTS.md` is the canonical instruction file; provider adapters and the
 context manifest are indexed in `docs/ai/README.md`.
 
-Context version: `2026-09-02.3`
+Context version: `2026-09-02.4`
 
 ## Product safety boundaries
 
@@ -169,6 +169,16 @@ current conversation:
 
 Dry-run helpers can still expose target metadata or contact external services.
 State what they access before running them and honor the user's authorization.
+
+## Cross-repository testing scope
+
+Infrastructure is not currently a technology target in the
+`gamblock-ai-testing` runner and has no testing-repository report. When the
+user explicitly requests infrastructure validation, run only the authorized
+local check unless the user expands the testing scope. Do not invent an
+infrastructure report or copy deployment/device evidence. If a future
+cross-repository evaluation is requested, provide the same test receipt and
+public/private data classification required by the umbrella context.
 
 ## Secrets and configuration
 
