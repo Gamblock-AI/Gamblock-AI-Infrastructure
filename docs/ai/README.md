@@ -3,7 +3,7 @@
 
 Jika ada pertentangan dengan `pkm_proposal.md`, proposal PKM adalah sumber mutlak.
 
-Context version: `2026-09-04.4`
+Context version: `2026-09-04.5`
 
 This repository is intentionally self-contained. A clone does not need a
 parent workspace to discover its product constraints, infrastructure workflow,
