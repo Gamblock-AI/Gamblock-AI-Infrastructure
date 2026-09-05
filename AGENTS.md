@@ -5,7 +5,7 @@ This repository is self-contained and requires no external workspace context.
 `AGENTS.md` is the canonical instruction file; provider adapters and the
 context manifest are indexed in `docs/ai/README.md`.
 
-Context version: `2026-09-05.2`
+Context version: `2026-09-06.1`
 
 ## Product safety boundaries
 
@@ -87,11 +87,14 @@ operational command.
 
 `make deploy` is the complete deployment path: it first validates configured
 provider credentials through read-only endpoints, reconciles Cloudflare DNS,
-provisions the host, snapshots PostgreSQL, runs backend migrate-up and the
-environment's seeding plan, starts both applications and Caddy, then waits for
-the public website and API health endpoints. It never invokes migrate-down.
-The target environment is selected with `ENV`: `make deploy` (production) or
-`make deploy ENV=staging`.
+then deploys production and staging sequentially. Each environment provisions
+the host as needed, snapshots its PostgreSQL database, runs backend migrate-up
+and its seeding plan, starts its application containers and the shared Caddy,
+then waits for that environment's public website and API health endpoints. It
+never invokes migrate-down. An explicit `ENV` limits the path to one
+environment: `make deploy ENV=production` or `make deploy ENV=staging`.
+The default order is production first, then staging, and a production failure
+stops the default path before staging begins.
 
 Environment-specific configuration lives in
 `group_vars/environments/{production,staging}.yml` and is loaded through the

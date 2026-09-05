@@ -3,7 +3,7 @@
 
 Jika ada pertentangan dengan `pkm_proposal.md`, proposal PKM adalah sumber mutlak.
 
-Context version: `2026-09-05.2`
+Context version: `2026-09-06.1`
 
 This repository is intentionally self-contained. A clone does not need a
 parent workspace to discover its product constraints, infrastructure workflow,
@@ -79,7 +79,9 @@ gates. The credential validator matches the active backend private key to the
 public Android/Windows trust-store entry without printing either value. Public
 Next.js variables are build-time image inputs and are not secret runtime
 Ansible substitutions; the staging website image (`:staging`) is built by
-website CI with the staging public URLs.
+website CI with the staging public URLs. The infrastructure GitHub helper keeps
+the Flutter production and staging public URL variables aligned with this
+contract; local Flutter development uses its component `.env` instead.
 
 ### Environment contract (staging vs production)
 
@@ -102,7 +104,9 @@ Key implications:
 - OTP and all Fonnte notifications are sent for real in both environments.
   There is a single `FONNTE_TOKEN` in the vault, so staging and production
   share the same WhatsApp device; this is a shared-delivery trait, not a data
-  overlap.
+  overlap. The backend also reads one shared `DEEPSEEK_API_KEY` from the vault
+  in both environments; local development intentionally uses those same two
+  provider values in its private `.env`.
 - Production contains exactly the four owner-approved demo accounts and nothing
   else when it is seeded fresh. Once any account exists, the automatic seed plan
   is skipped and the populated database is left unchanged on deploy. Staging
@@ -115,13 +119,41 @@ Key implications:
   `false` for both; `migrate-down`/`reset-storage` remain owner-invoked manual
   tools only.
 
+### Local development contract
+
+Local development is intentionally provider-connected rather than demo-only.
+The current local backend `.env` uses the same `FONNTE_TOKEN` and
+`DEEPSEEK_API_KEY` values as the production and staging backend environments,
+while keeping `APP_ENV=development`. Local backend notification mode is
+`production`, so Fonnte-backed verification, reset, export/deletion, and
+emergency flows can send real WhatsApp messages. DeepSeek-backed translation
+and SPK personalization can make real API calls when invoked; SPK
+personalization remains subject to the user's privacy preference.
+
+The local application database is separate from both server databases and must
+be a local PostgreSQL instance. The current Flutter local configuration targets
+the Android-emulator host aliases `http://10.0.2.2:8080` and
+`http://10.0.2.2:3000`; desktop or browser runs use loopback URLs instead. The
+local `.env` files are gitignored/private configuration and are never
+published as GitHub variables. The safe `.env.example` defaults remain
+demo/blank so a fresh clone cannot accidentally send provider traffic before
+the developer explicitly opts into the local connected setup.
+
+All three environments must preserve the privacy boundary: DeepSeek receives
+only the permitted SPK decision and self-reported context for personalization,
+and no environment may send raw DOM, URLs, domains, screenshots, or browsing
+history to external providers.
+
 
 
 The complete `make deploy` path first validates GHCR, Cloudflare, Fonnte, and
 DeepSeek credentials through read-only provider endpoints, then reconciles
-Cloudflare DNS before Caddy certificate issuance, snapshots PostgreSQL, runs
-the environment's seeding plan, starts the applications, and waits for both
-public HTTPS endpoints. Seeding differs per environment: production runs
+Cloudflare DNS before Caddy certificate issuance. Without `ENV`, it runs the
+full environment flow sequentially—production first, then staging—so each
+environment snapshots its own PostgreSQL database, runs its seeding plan,
+starts its application, and waits for its public HTTPS endpoints. An explicit
+`ENV=production` or `ENV=staging` runs only that environment. Seeding differs
+per environment: production runs
 `migrate-up` plus the users-only `seed-accounts` binary (the four accounts
 with no education/Learning Hub/social/activity fixtures), but the account seed
 plan is gated on an empty users table — a populated production database is
@@ -129,6 +161,12 @@ left exactly as-is on deploy and the seeder only runs against an empty or
 fresh-reset database. Staging runs `migrate-up` → `seeder` →
 `seed-learning-hub` → `demo-seeder` (all seeders). Neither environment is reset
 on deploy; `migrate-down`/`reset-storage` are owner-invoked manual tools only.
+The production step targets the production containers and `gamblock`, while
+the staging step targets the staging containers and `gamblock_staging`; the
+shared PostgreSQL container and Caddy configuration are kept common to both
+paths. The default flow is fail-fast: a production failure prevents staging
+from starting, while a staging failure after a successful production step
+returns failure without automatically rolling production back.
 Ansible and CI update
 backups older than 14 days are removed. A nightly scheduled backup
 (`roles/system/backup-setup`) archives both PostgreSQL databases (production

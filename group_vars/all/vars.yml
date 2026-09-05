@@ -113,7 +113,6 @@ github_enable_production_release: "true"
 github_enable_windows_pilot_release: "true"
 
 # ---- Flutter public environment configuration ----
-flutter_development_api_url: "https://thankful-midge-noble.ngrok-free.app"
 flutter_staging_api_url: "https://api-staging.gamblock-ai.com"
 flutter_staging_web_base_url: "https://staging.gamblock-ai.com"
 flutter_production_api_url: "https://api.gamblock-ai.com"

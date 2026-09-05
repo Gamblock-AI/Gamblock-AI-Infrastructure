@@ -1,12 +1,19 @@
 .PHONY: help ping check check-mode lint verify-context credential-check \
         credential-check-online bootstrap deploy app \
+        validate-deploy-environments deploy-environment \
         vault-init vault-integrations vault-encrypt vault-decrypt vault-view vault-edit \
         github-secrets github-secrets-dry cloudflare cloudflare-dry \
         ci-init ssh
 
 PLAYBOOK = playbooks/server-setup.yml
 INVENTORY = inventory/hosts.ini
-# Target environment: production (default) or staging. Pass as `make deploy ENV=staging`.
+# `make deploy` runs both environments in order. An explicit command-line
+# `ENV=production` or `ENV=staging` limits the deploy to one environment.
+ifeq ($(origin ENV),command line)
+DEPLOY_ENVIRONMENTS := $(ENV)
+else
+DEPLOY_ENVIRONMENTS := production staging
+endif
 ENV ?= production
 OPTS = -i $(INVENTORY) -e target_environment=$(ENV)
 VAULT_FILE = group_vars/all/vault.yml
@@ -42,9 +49,22 @@ credential-check: ## Validate the encrypted production credential contract local
 credential-check-online: ## Validate credentials against read-only provider endpoints
 	@python3 scripts/verify-credentials.py --online
 
-deploy: check ## Prepare DNS/database, deploy the $(ENV) stack, and verify it
+deploy: validate-deploy-environments check ## Prepare DNS/database, deploy production and staging, and verify them
 	@python3 scripts/verify-credentials.py --online
 	@./scripts/cloudflare-dns.sh
+	@for target_env in $(DEPLOY_ENVIRONMENTS); do \
+		$(MAKE) --no-print-directory deploy-environment ENV="$$target_env" || exit $$?; \
+	done
+
+validate-deploy-environments:
+	@for target_env in $(DEPLOY_ENVIRONMENTS); do \
+		case "$$target_env" in \
+			production|staging) ;; \
+			*) echo "ENV must be production or staging (received: $$target_env)" >&2; exit 2 ;; \
+		esac; \
+	done
+
+deploy-environment:
 	@ansible-playbook $(OPTS) $(PLAYBOOK)
 	@./scripts/verify-production.sh $(ENV)
 

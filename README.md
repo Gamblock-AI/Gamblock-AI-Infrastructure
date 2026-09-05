@@ -3,7 +3,7 @@
 Ansible deployment for the Gamblock-AI backend, website, PostgreSQL, and Caddy
 on one Ubuntu VPS.
 
-AI workflow context version: `2026-09-05.2`. Start with [`AGENTS.md`](AGENTS.md)
+AI workflow context version: `2026-09-06.1`. Start with [`AGENTS.md`](AGENTS.md)
 and [`docs/ai/README.md`](docs/ai/README.md).
 
 ## Environment shape
@@ -31,6 +31,34 @@ The inventory pins the VPS ED25519 host identity. UFW permits only SSH, HTTP,
 HTTPS, and HTTP/3; fail2ban protects SSH; unattended upgrades, Docker log
 rotation, and a 2 GiB swapfile suit the current small VPS. This remains a
 single-host operational deployment, not a high-availability claim.
+
+## Environment contract
+
+Production and staging use the same backend runtime behavior and the same
+provider credentials. Both run `APP_ENV=production`,
+`NOTIFICATION_MODE=production`, `ENABLE_DEV_LOGIN=false`, and
+`ENABLE_DEMO_DATA=false`. Both use the same `FONNTE_TOKEN` and
+`DEEPSEEK_API_KEY` from the encrypted Ansible Vault; they are not separate
+provider accounts. The environments are isolated at the database and
+application-container level, not at the provider-credential level.
+
+The local backend intentionally uses the same Fonnte and DeepSeek token values
+in its gitignored `.env`. Local is therefore capable of sending real WhatsApp
+messages and making real DeepSeek API requests. This is intentional for local
+integration work, not a fallback to demo mode. DeepSeek-backed paths still obey
+the backend privacy and per-user SPK-personalization rules; raw DOM, URLs,
+domains, screenshots, and browsing history must never be sent to the provider.
+
+| Surface | Runtime | Provider behavior | Database / endpoints |
+|---|---|---|---|
+| Local | `APP_ENV=development` | Real Fonnte and DeepSeek when configured/invoked | Local PostgreSQL and loopback URLs |
+| Production | `APP_ENV=production` | Real Fonnte and DeepSeek | `gamblock`, public production domains |
+| Staging | `APP_ENV=production` | Real Fonnte and DeepSeek | `gamblock_staging`, public staging domains |
+
+The `.env.example` files retain safe starter defaults. The local checkout may
+override those defaults intentionally, but real values must remain only in the
+gitignored local `.env` or an approved secret store and must never be copied
+into documentation, source control, or Flutter client configuration.
 
 ## Files
 
@@ -81,6 +109,56 @@ validation. `make ping`, `make check-mode`, `make bootstrap`, deployment,
 remote shell, vault access, GitHub mutation, and Cloudflare mutation require
 the authorization described in `AGENTS.md`.
 
+## Local application runbook
+
+The infrastructure repository manages the VPS deployment; local application
+processes are started from their component repositories. Use a local
+PostgreSQL instance only—never point a local `.env` at the production or
+staging database.
+
+Backend:
+
+```sh
+cd ../gamblock-ai-backend
+# Create .env from .env.example only when .env does not exist.
+make key-generate       # only for a new .env without a valid key
+make migrate-up
+make run                 # http://127.0.0.1:8080
+```
+
+Before starting the backend locally, keep `APP_ENV=development`,
+`NOTIFICATION_MODE=production`, and the intentional local copies of
+`FONNTE_TOKEN` and `DEEPSEEK_API_KEY` in the private `.env`. With this setting,
+registration, verification, password reset, export/deletion, and emergency
+flows that use Fonnte can send real WhatsApp messages. DeepSeek translation or
+SPK personalization can make real API calls when the corresponding feature is
+invoked; SPK personalization remains controlled by the user's privacy
+preference.
+
+Website:
+
+```sh
+cd ../gamblock-ai-website
+npm ci
+# Create .env.local from .env.example when needed, using the local API URL.
+npm run dev             # http://localhost:3000
+```
+
+Flutter Android emulator:
+
+```sh
+cd ../gamblock_ai_apps
+flutter pub get
+flutter run --flavor play
+```
+
+The current local Flutter `.env` targets `http://10.0.2.2:8080` for the host
+backend and `http://10.0.2.2:3000` for the host website. `10.0.2.2` is the
+Android-emulator alias for host loopback. For Chrome, Windows, or another
+desktop target, change only the local `.env` URLs to `localhost` or the
+appropriate host address; do not publish those local values as GitHub
+variables.
+
 ## Readiness gates
 
 Normal application deployment intentionally stops before remote changes until
@@ -106,8 +184,9 @@ with Zone Read, DNS Edit, and Zone Settings Edit for `gamblock-ai.com`.
 ```sh
 make ping
 make bootstrap
-make deploy                 # production (gamblock-ai.com)
-make deploy ENV=staging     # staging (staging.gamblock-ai.com)
+make deploy                 # production, then staging
+make deploy ENV=production  # production only
+make deploy ENV=staging     # staging only
 make app APP=gamblock-ai-backend
 make app APP=gamblock-ai-backend ENV=staging
 make app APP=gamblock-ai-website ENV=staging
@@ -115,12 +194,22 @@ make ssh
 ```
 
 `bootstrap` provisions the host, Docker, PostgreSQL (both databases), and Caddy
-without the third-party application gates. `deploy` is the one-command path for
-the selected environment: it updates Cloudflare DNS/strict SSL, provisions the
-stack, creates a pre-deploy PostgreSQL backup, runs `migrate-up` and the
-environment's seeding plan, starts the applications and Caddy, and waits until
-the environment's public website and API health endpoints both answer. `app`
-selects the requested role for the selected environment.
+without the third-party application gates. `deploy` updates Cloudflare
+DNS/strict SSL once, provisions the selected stack, creates a pre-deploy
+PostgreSQL backup, runs `migrate-up` and the environment's seeding plan, starts
+the applications and Caddy, and waits until the environment's public website
+and API health endpoints both answer. `app` selects the requested role for the
+selected environment.
+
+The default `make deploy` performs that complete flow sequentially for
+production and then staging. `make deploy ENV=production` performs only the
+production flow, while `make deploy ENV=staging` performs only the staging
+flow. The two environments use the same playbook and shared
+PostgreSQL/Caddy services, but the backend backup and migration target the
+selected database (`gamblock` or `gamblock_staging`). If production fails, the
+default command stops and does not start staging; if staging fails after
+production succeeds, the command returns failure without automatically
+rolling production back. Neither flow resets its selected database.
 
 Seeding plans per environment:
 
@@ -138,6 +227,14 @@ Seeding plans per environment:
   `fresh_reset_before_deploy` is `false`, so staging keeps its data between
   deploys like production. Staging intentionally keeps the four demo accounts
   plus the full fixture set for QA; this asymmetry vs production is by design.
+
+The seeder difference is the main database-flow difference after migration:
+production uses the users-only `seed-accounts` path and skips it once the
+`users` table already contains an account; staging always invokes the full
+baseline/content/demo sequence so QA fixtures remain available. The staging
+demo seeder rejects accounts outside the approved four-account fixture, so a
+staging database containing unrelated accounts can make deployment fail rather
+than silently mixing those accounts with the demo fixture.
 
 Runtime behavior is identical between staging and production: both run
 `APP_ENV=production`, `NOTIFICATION_MODE=production` (real Fonnte
@@ -196,8 +293,11 @@ make cloudflare
 
 GitHub configuration stores only `VPS_PASSWORD` as an Actions secret. Host,
 pinned SSH fingerprint, public URLs, and enable/disable gates are Actions
-variables. The Flutter repository additionally receives only the public
-protection-grant trust store; Android/Windows signing material is provisioned
+variables. The Website repository receives production and staging public build
+URLs; the Flutter repository receives `PROD_API_BASE_URL`, `WEB_BASE_URL`,
+`STAGING_API_BASE_URL`, `STAGING_WEB_BASE_URL`, and the public protection-grant
+trust store. Local Flutter development uses the component `.env` and is not
+published as a GitHub variable. Android/Windows signing material is provisioned
 separately through protected release environments and is never read from the
 deployment vault. CI auto-deploy is enabled (`ENABLE_VPS_DEPLOY=true`): a push
 to `main` on the backend or website repository pulls the new image and runs the
