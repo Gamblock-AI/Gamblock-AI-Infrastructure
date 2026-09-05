@@ -39,7 +39,8 @@
       - --command=SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='users'
   register: backend_users_table_check
   changed_when: false
-  when: seed_only_when_empty | default(false) | bool
+  when:
+    - (seed_only_when_empty | default(false) | bool) or (demo_seed_only_when_valid_target | default(false) | bool)
 
 - name: Count existing backend user accounts
   community.docker.docker_container_exec:
@@ -54,8 +55,42 @@
   register: backend_users_count_check
   changed_when: false
   when:
-    - seed_only_when_empty | default(false) | bool
+    - (seed_only_when_empty | default(false) | bool) or (demo_seed_only_when_valid_target | default(false) | bool)
     - backend_users_table_check.stdout | trim == '1'
+
+- name: Check whether the staging database is a valid demo seed target
+  community.docker.docker_container_exec:
+    container: "{{ postgres_container_name }}"
+    argv:
+      - psql
+      - --username={{ gamblock_db_username }}
+      - --dbname={{ gamblock_db_name }}
+      - --tuples-only
+      - --no-align
+      - --command={{ demo_seed_target_query }}
+  register: backend_demo_seed_target_check
+  changed_when: false
+  when:
+    - demo_seed_only_when_valid_target | default(false) | bool
+    - backend_users_table_check.stdout | trim == '1'
+
+- name: Determine whether the staging demo seeder may run
+  ansible.builtin.set_fact:
+    gamblock_backend_demo_seed_allowed: >-
+      {{ not (demo_seed_only_when_valid_target | default(false) | bool)
+         or (backend_users_table_check.stdout | default('0') | trim != '1')
+         or (backend_demo_seed_target_check.stdout | default('') | trim in ['empty', 'demo']) }}
+
+- name: Build the effective backend seed plan
+  ansible.builtin.set_fact:
+    gamblock_backend_seed_plan: "{{ seed_plan | default([]) }}"
+
+- name: Skip the full demo seeder for a populated staging database
+  ansible.builtin.set_fact:
+    gamblock_backend_seed_plan: "{{ gamblock_backend_seed_plan | reject('equalto', 'demo-seeder') | list }}"
+  when:
+    - demo_seed_only_when_valid_target | default(false) | bool
+    - not (gamblock_backend_demo_seed_allowed | bool)
 
 - name: Determine whether seeding must run on this deploy
   ansible.builtin.set_fact:
@@ -89,11 +124,13 @@
     app_prepare_services: >-
       {{ (['migrate-down', 'reset-storage'] if (fresh_reset_before_deploy | default(false) | bool) else [])
          + ['migrate-up']
-         + ((seed_plan | default([])) if (gamblock_backend_seed_required | default(true) | bool) else []) }}
+         + ((gamblock_backend_seed_plan | default([])) if (gamblock_backend_seed_required | default(true) | bool) else []) }}
     app_update_env:
       DB_USER: "{{ gamblock_db_username }}"
       DB_NAME: "{{ gamblock_db_name }}"
       POSTGRES_CONTAINER_NAME: "{{ postgres_container_name }}"
       POSTGRES_BACKUP_RETENTION_DAYS: "{{ postgres_backup_retention_days }}"
-      SEED_SERVICES: "{{ (['migrate-up'] + ((seed_plan | default([])) if (gamblock_backend_seed_required | default(true) | bool) else [])) | join(' ') }}"
+      SEED_SERVICES: "{{ (['migrate-up'] + ((gamblock_backend_seed_plan | default([])) if (gamblock_backend_seed_required | default(true) | bool) else [])) | join(' ') }}"
       SEED_ONLY_WHEN_EMPTY: "{{ 'true' if (seed_only_when_empty | default(false) | bool) else 'false' }}"
+      DEMO_SEED_ONLY_WHEN_VALID_TARGET: "{{ 'true' if (demo_seed_only_when_valid_target | default(false) | bool) else 'false' }}"
+      DEMO_SEED_TARGET_QUERY: "{{ demo_seed_target_query | default('') }}"

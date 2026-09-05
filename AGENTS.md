@@ -5,7 +5,7 @@ This repository is self-contained and requires no external workspace context.
 `AGENTS.md` is the canonical instruction file; provider adapters and the
 context manifest are indexed in `docs/ai/README.md`.
 
-Context version: `2026-09-06.1`
+Context version: `2026-09-06.2`
 
 ## Product safety boundaries
 
@@ -115,12 +115,14 @@ Seeding plans differ by environment:
   database is left exactly as-is on deploy. The seeder still fails closed when
   invoked manually against a database containing an account outside the
   fixture.
-- Staging runs `migrate-up`, `seeder`, `seed-learning-hub`, and `demo-seeder`
-  on every deploy (all seeders available in the backend image, including the
-  full accounts-and-fixtures seeder) but is NOT reset: `fresh_reset_before_deploy`
-  is `false`, so staging keeps its data between deploys just like production.
-  Staging intentionally keeps the four demo accounts plus the full fixture set
-  for QA; this asymmetry vs production is by design.
+- Staging runs `migrate-up`, `seeder`, and `seed-learning-hub` on every deploy,
+  then runs `demo-seeder` only when the users table is empty or contains exactly
+  the four approved demo accounts. If staging has unrelated/real accounts, the
+  demo seeder is skipped and those accounts are preserved; the baseline
+  seeders still run. Staging is NOT reset: `fresh_reset_before_deploy` is
+  `false`, so staging keeps its data between deploys just like production.
+  Staging's intentional full fixture set is available on an empty or valid-demo
+  target; this asymmetry vs production is by design.
 
 Runtime behavior is identical between staging and production: both run
 `APP_ENV=production`, `NOTIFICATION_MODE=production` (real Fonnte OTP/WhatsApp
@@ -132,14 +134,17 @@ share the same WhatsApp delivery device — a shared-delivery trait, not data
 overlap.
 
 `update.sh` stays non-destructive and environment-aware: it sources the
-Ansible-rendered `update.env` (database name/user, container, seeding plan)
+Ansible-rendered `update.env` (database name/user, container, seeding plan,
+and staging demo-target gate)
 and never performs a fresh reset. Guarded tools (`migrate-down`,
 `reset-storage`, `demo-seeder`, `seed-accounts`) receive their exact
-confirmation variables from the rendered application `.env` and are never added
-to the automatic deploy path. `update.sh` additionally skips the account
-seeders (`seed-accounts`/`demo-seeder`) at runtime when the users table already
-contains accounts, so a late CI update never fails closed against a populated
-database.
+confirmation variables from the rendered application `.env`. The destructive
+tools remain manual-only; the two account seeders may run through an
+environment's guarded seed plan. `update.sh` additionally applies the
+configured account-seeder gates at runtime. Production skips `seed-accounts`
+once any account exists; staging skips `demo-seeder` only when the accounts are
+not the exact approved demo fixture. A late CI update therefore never fails
+closed against unrelated staging accounts.
 
 The backend Compose `tools` profile exposes owner-invoked
 `migrate-down`, `reset-storage`, `seeder`, `seed-learning-hub`,

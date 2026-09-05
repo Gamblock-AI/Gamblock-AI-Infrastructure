@@ -25,6 +25,8 @@ POSTGRES_CONTAINER_NAME="${POSTGRES_CONTAINER_NAME:-postgres-db}"
 POSTGRES_BACKUP_RETENTION_DAYS="${POSTGRES_BACKUP_RETENTION_DAYS:-14}"
 SEED_SERVICES="${SEED_SERVICES:-}"
 SEED_ONLY_WHEN_EMPTY="${SEED_ONLY_WHEN_EMPTY:-false}"
+DEMO_SEED_ONLY_WHEN_VALID_TARGET="${DEMO_SEED_ONLY_WHEN_VALID_TARGET:-false}"
+DEMO_SEED_TARGET_QUERY="${DEMO_SEED_TARGET_QUERY:-}"
 
 case "$POSTGRES_BACKUP_RETENTION_DAYS" in
   ""|*[!0-9]*)
@@ -44,6 +46,32 @@ log() {
 error_exit() {
   log "ERROR: $*"
   exit 1
+}
+
+demo_seed_target_state() {
+  local users_table users_total target_state
+
+  users_table=$(docker exec "$POSTGRES_CONTAINER_NAME" psql \
+    --username="$DB_USER" --dbname="$DB_NAME" --tuples-only --no-align \
+    --command="SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='users'" \
+    2>/dev/null) || return 1
+  if [ "${users_table:-0}" != "1" ]; then
+    echo "empty"
+    return 0
+  fi
+
+  users_total=$(docker exec "$POSTGRES_CONTAINER_NAME" psql \
+    --username="$DB_USER" --dbname="$DB_NAME" --tuples-only --no-align \
+    --command="SELECT count(*) FROM users" 2>/dev/null) || return 1
+  if [ "${users_total:-0}" -eq 0 ]; then
+    echo "empty"
+    return 0
+  fi
+
+  target_state=$(docker exec "$POSTGRES_CONTAINER_NAME" psql \
+    --username="$DB_USER" --dbname="$DB_NAME" --tuples-only --no-align \
+    --command="$DEMO_SEED_TARGET_QUERY" 2>/dev/null) || return 1
+  echo "${target_state:-populated}"
 }
 
 # Record current image IDs (for cleanup after pull).
@@ -97,6 +125,18 @@ if docker compose -f "$COMPOSE_FILE" config --services | grep -qx 'migrate-up'; 
         fi
         ;;
     esac
+    if [ "$SERVICE" = "demo-seeder" ] && [ "$DEMO_SEED_ONLY_WHEN_VALID_TARGET" = "true" ]; then
+      [ -n "$DEMO_SEED_TARGET_QUERY" ] || error_exit "DEMO_SEED_TARGET_QUERY is required for demo-seeder gating"
+      DEMO_SEED_STATE=$(demo_seed_target_state) || error_exit "could not inspect demo seed target"
+      case "$DEMO_SEED_STATE" in
+        empty|demo)
+          ;;
+        *)
+          log "Skipping demo-seeder: database contains non-demo user accounts"
+          continue
+          ;;
+      esac
+    fi
     log "Running prepare service: $SERVICE"
     docker compose -f "$COMPOSE_FILE" --profile tools run --rm --no-deps "$SERVICE" \
       || error_exit "prepare service $SERVICE failed"

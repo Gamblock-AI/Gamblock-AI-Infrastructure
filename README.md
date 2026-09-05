@@ -3,7 +3,7 @@
 Ansible deployment for the Gamblock-AI backend, website, PostgreSQL, and Caddy
 on one Ubuntu VPS.
 
-AI workflow context version: `2026-09-06.1`. Start with [`AGENTS.md`](AGENTS.md)
+AI workflow context version: `2026-09-06.2`. Start with [`AGENTS.md`](AGENTS.md)
 and [`docs/ai/README.md`](docs/ai/README.md).
 
 ## Environment shape
@@ -221,20 +221,24 @@ Seeding plans per environment:
   database that contains accounts outside the approved fixture, and it never
   seeds education, Learning Hub, social, activity, support, or operational
   fixtures.
-- **staging** — `migrate-up`, `seeder`, `seed-learning-hub`, and `demo-seeder`
-  run on every deploy (all seeders available in the backend image, including the
-  full accounts-and-fixtures demo seeder), but staging is **not** reset:
+- **staging** — `migrate-up`, `seeder`, and `seed-learning-hub` run on every
+  deploy. `demo-seeder` runs only when the users table is empty or contains
+  exactly the four approved demo accounts. If unrelated/real accounts exist,
+  the demo seeder is skipped and those accounts are preserved while the
+  baseline seeders still run. Staging is **not** reset:
   `fresh_reset_before_deploy` is `false`, so staging keeps its data between
-  deploys like production. Staging intentionally keeps the four demo accounts
-  plus the full fixture set for QA; this asymmetry vs production is by design.
+  deploys like production. An empty or valid-demo staging database receives the
+  full fixture set; this asymmetry vs production is by design.
 
 The seeder difference is the main database-flow difference after migration:
 production uses the users-only `seed-accounts` path and skips it once the
-`users` table already contains an account; staging always invokes the full
-baseline/content/demo sequence so QA fixtures remain available. The staging
-demo seeder rejects accounts outside the approved four-account fixture, so a
-staging database containing unrelated accounts can make deployment fail rather
-than silently mixing those accounts with the demo fixture.
+`users` table already contains an account; staging always runs the safe
+baseline/content seeders, while its full demo sequence is conditional on the
+database target. An empty database or the exact four-account fixture runs
+`demo-seeder`; a staging database containing unrelated accounts skips it rather
+than silently mixing those accounts with the demo fixture. The same target
+gate is rendered into `update.env`, so the Ansible deploy and a later CI
+`update.sh` follow the same rule.
 
 Runtime behavior is identical between staging and production: both run
 `APP_ENV=production`, `NOTIFICATION_MODE=production` (real Fonnte
@@ -275,12 +279,13 @@ docker compose --profile tools run --rm --no-deps -e CONFIRM_SEED_ACCOUNTS=CREAT
 docker compose up -d --no-deps <backend-container>
 ```
 
-Keep the API stopped if any one-shot service fails. Both seeders accept an
-empty database or the exact four known fixtures only; they reject unrelated
-accounts, never seed education/Learning Hub/social/activity content through the
-automatic production path, and run automatically only against an empty database
-(an empty database or the fresh-reset path) — otherwise `make deploy` and
-`update.sh` skip them and leave the populated database exactly as-is.
+Keep the API stopped if any one-shot service fails. Both account seeders accept
+an empty database or the exact four known fixtures only; they reject unrelated
+accounts. Production's users-only seeder runs automatically only for an empty
+database, while staging's full demo seeder runs for an empty or exact-demo
+database and is skipped for unrelated accounts. The safe baseline seeders still
+run on populated staging, and no automatic path resets or deletes the existing
+database.
 
 ## GitHub and Cloudflare helpers
 

@@ -3,7 +3,7 @@
 
 Jika ada pertentangan dengan `pkm_proposal.md`, proposal PKM adalah sumber mutlak.
 
-Context version: `2026-09-06.1`
+Context version: `2026-09-06.2`
 
 This repository is intentionally self-contained. A clone does not need a
 parent workspace to discover its product constraints, infrastructure workflow,
@@ -96,7 +96,7 @@ re-introduce a `demo`/dev-only divergence without an explicit owner decision.
 | `ENABLE_DEMO_DATA` | `false` | `false` |
 | Database | `gamblock` | `gamblock_staging` |
 | Domains / CORS / web base URL | `gamblock-ai.com` | `staging.gamblock-ai.com` |
-| Seeding plan | `seed-accounts` only, gated on an empty database (`seed_only_when_empty: true`) — four accounts, **no** fixture content | `seeder` + `seed-learning-hub` + `demo-seeder` (**four accounts + full fixture set** — intentional) |
+| Seeding plan | `seed-accounts` only, gated on an empty database (`seed_only_when_empty: true`) — four accounts, **no** fixture content | `seeder` + `seed-learning-hub` every deploy; `demo-seeder` only for an empty database or the exact four-account fixture — otherwise it is skipped to preserve unrelated accounts |
 | Destructive reset | `fresh_reset_before_deploy: false` | `fresh_reset_before_deploy: false` (staging is NOT reset; data persists between deploys like production) |
 
 Key implications:
@@ -159,8 +159,11 @@ with no education/Learning Hub/social/activity fixtures), but the account seed
 plan is gated on an empty users table — a populated production database is
 left exactly as-is on deploy and the seeder only runs against an empty or
 fresh-reset database. Staging runs `migrate-up` → `seeder` →
-`seed-learning-hub` → `demo-seeder` (all seeders). Neither environment is reset
-on deploy; `migrate-down`/`reset-storage` are owner-invoked manual tools only.
+`seed-learning-hub` on every deploy, then runs `demo-seeder` only for an empty
+database or the exact four-account fixture. A populated staging database with
+unrelated accounts skips only `demo-seeder`, preserving those accounts while
+retaining the safe baseline seeders. Neither environment is reset on deploy;
+`migrate-down`/`reset-storage` are owner-invoked manual tools only.
 The production step targets the production containers and `gamblock`, while
 the staging step targets the staging containers and `gamblock_staging`; the
 shared PostgreSQL container and Caddy configuration are kept common to both
@@ -173,13 +176,15 @@ backups older than 14 days are removed. A nightly scheduled backup
 `gamblock` and staging `gamblock_staging`) plus the dynamic file volumes of
 every backend container (education media, exports, artifacts, avatars) into
 `{{ docker_stack_base }}/backups`, pruned by the same 14-day retention.
-`update.sh` remains non-destructive
-and environment-aware through the rendered `update.env`, and when the
-environment is seed-only-when-empty it skips `seed-accounts`/`demo-seeder` at
-runtime if the database already contains user accounts.
-Migrate-down, dynamic-storage reset, the full demo seeder, and the users-only
-account seeder remain
-separately guarded manual tools and are never invoked by `update.sh`.
+`update.sh` remains non-destructive and environment-aware through the rendered
+`update.env`. Production skips `seed-accounts` once the users table contains an
+account; staging checks the same exact demo-target contract used by
+`demo-seeder` and skips only that full demo seeder when unrelated accounts are
+present. A late CI update therefore never fails closed against a populated
+staging database.
+Migrate-down and dynamic-storage reset remain separately guarded manual tools
+and are never invoked by `update.sh`; the guarded account seeders may be
+invoked by the selected environment seed plan subject to their target gates.
 
 Production-host evidence rechecked on 2026-08-11: the
 root/password/pinned-host-key connection passed on the configured VPS. UFW,

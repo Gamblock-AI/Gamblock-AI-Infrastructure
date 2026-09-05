@@ -58,6 +58,22 @@ seed_plan:
   - seed-learning-hub
   - demo-seeder
 demo_seed_confirm: "CREATE_FOUR_DEMO_ACCOUNTS"
+# The full demo seeder is fail-closed by design. When staging has acquired
+# real/unrelated accounts, preserve them and continue the safe baseline seeders
+# without attempting to mix the demo fixture into that database.
+demo_seed_only_when_valid_target: true
+demo_seed_target_query: >-
+  SELECT CASE
+    WHEN count(*) = 0 THEN 'empty'
+    WHEN count(*) = 4
+      AND count(*) FILTER (WHERE id = 'usr_gading' AND email = 'gading@gmail.com' AND role = 'user') = 1
+      AND count(*) FILTER (WHERE id = 'usr_dery' AND email = 'dery@gmail.com' AND role = 'user') = 1
+      AND count(*) FILTER (WHERE id = 'usr_suci' AND email = 'suci@gmail.com' AND role = 'partner') = 1
+      AND count(*) FILTER (WHERE id = 'usr_nasywa' AND email = 'nasywa@gmail.com' AND role = 'admin') = 1
+    THEN 'demo'
+    ELSE 'populated'
+  END
+  FROM users
 
 # ---- Destructive reset ----
 # Staging is NOT reset on deploy: it behaves like production and keeps its
