@@ -307,6 +307,8 @@ separately through protected release environments and is never read from the
 deployment vault. CI auto-deploy is enabled (`ENABLE_VPS_DEPLOY=true`): a push
 to `main` on the backend or website repository pulls the new image and runs the
 environment-aware, non-destructive `update.sh` for both production and staging.
+The SSH deploy script fails fast if production fails before staging runs, and
+each image pull retries transient registry/network failures before giving up.
 The authorized local `make deploy` path remains available for full deploys.
 Cloudflare dry-run is local-only and does not
 require or contact the API.

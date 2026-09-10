@@ -69,6 +69,8 @@ all five hosts from one Caddyfile. Environment-specific variables live in
 retain the pinned-host identity contract and are enabled: a push to `main` on
 the backend or website repository pulls the new image and runs the
 environment-aware, non-destructive `update.sh` for both production and staging.
+The SSH script fails fast when production fails, and `update.sh` retries
+transient image-pull failures before returning an error.
 The authorized local `make deploy` path remains canonical for full deploys. The backend deployment
 template keeps production on `APP_ENV=production` with dev login/demo data
 disabled, mounts artifact/export/media/avatar storage, and provides the

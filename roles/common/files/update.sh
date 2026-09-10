@@ -23,6 +23,8 @@ DB_USER="${DB_USER:-gamblock}"
 DB_NAME="${DB_NAME:-gamblock}"
 POSTGRES_CONTAINER_NAME="${POSTGRES_CONTAINER_NAME:-postgres-db}"
 POSTGRES_BACKUP_RETENTION_DAYS="${POSTGRES_BACKUP_RETENTION_DAYS:-14}"
+PULL_MAX_ATTEMPTS="${PULL_MAX_ATTEMPTS:-3}"
+PULL_RETRY_DELAY_SECONDS="${PULL_RETRY_DELAY_SECONDS:-10}"
 SEED_SERVICES="${SEED_SERVICES:-}"
 SEED_ONLY_WHEN_EMPTY="${SEED_ONLY_WHEN_EMPTY:-false}"
 DEMO_SEED_ONLY_WHEN_VALID_TARGET="${DEMO_SEED_ONLY_WHEN_VALID_TARGET:-false}"
@@ -31,6 +33,20 @@ DEMO_SEED_TARGET_QUERY="${DEMO_SEED_TARGET_QUERY:-}"
 case "$POSTGRES_BACKUP_RETENTION_DAYS" in
   ""|*[!0-9]*)
     echo "POSTGRES_BACKUP_RETENTION_DAYS must be a non-negative integer" >&2
+    exit 1
+    ;;
+esac
+
+case "$PULL_MAX_ATTEMPTS" in
+  ""|*[!0-9]*|0)
+    echo "PULL_MAX_ATTEMPTS must be a positive integer" >&2
+    exit 1
+    ;;
+esac
+
+case "$PULL_RETRY_DELAY_SECONDS" in
+  ""|*[!0-9]*)
+    echo "PULL_RETRY_DELAY_SECONDS must be a non-negative integer" >&2
     exit 1
     ;;
 esac
@@ -81,9 +97,19 @@ for IMAGE in "${COMPOSE_IMAGES[@]}"; do
   OLD_IMAGE_IDS["$IMAGE"]=$(docker image inspect "$IMAGE" --format '{{.Id}}' 2>/dev/null || true)
 done
 
-# Pull latest images.
-log "Pulling images"
-docker compose -f "$COMPOSE_FILE" pull || error_exit "docker compose pull failed"
+# Pull latest images. Registry blob downloads can time out transiently, so
+# retry the complete compose pull before failing the deployment.
+for attempt in $(seq 1 "$PULL_MAX_ATTEMPTS"); do
+  log "Pulling images (attempt $attempt/$PULL_MAX_ATTEMPTS)"
+  if docker compose -f "$COMPOSE_FILE" pull; then
+    break
+  fi
+  if [ "$attempt" -eq "$PULL_MAX_ATTEMPTS" ]; then
+    error_exit "docker compose pull failed after $PULL_MAX_ATTEMPTS attempts"
+  fi
+  log "Image pull failed; retrying in ${PULL_RETRY_DELAY_SECONDS}s"
+  sleep "$PULL_RETRY_DELAY_SECONDS"
+done
 
 # The backend compose file exposes guarded one-shot database tools. Website
 # compose files have no migrate-up service and skip this entire block.
