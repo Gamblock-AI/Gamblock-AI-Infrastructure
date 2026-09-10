@@ -69,7 +69,7 @@ media_embed_allowed_hosts:
 # ---- DeepSeek-backed supporting features ----
 # The API key is stored under vault_gamblock_backend.deepseek_api_key.
 deepseek_base_url: "https://api.deepseek.com"
-deepseek_model: "deepseek-v4-flash"
+deepseek_model: "deepseek-flash"
 spk_llm_enrichment: true
 
 # ---- Device-bound protection grants ----
